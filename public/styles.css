@@ -488,3 +488,15 @@ body:has(.login) { padding-bottom: 0; }
 .ai-wait i { width: 18px; height: 18px; border-radius: 50%; border: 3px solid currentColor; border-right-color: transparent; animation: spin .8s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 .stepper button[data-d^="-"] { background: var(--raised); color: var(--ink); border-color: var(--line); }
+
+/* ---------- Steps (Apple Health) ---------- */
+.steps-row { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.steps-big { font-family: var(--f-display); font-weight: 400; font-size: 42px; line-height: 1; color: var(--accent); }
+.spark { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; height: 46px; align-items: end; }
+.spark span { height: var(--h); background: var(--raised); border-radius: 6px 6px 3px 3px; min-height: 4px; }
+.spark span.hit { background: color-mix(in srgb, var(--accent) 55%, var(--raised)); }
+.spark span.now { background: var(--accent); }
+.guide { margin: 0; padding-left: 20px; display: grid; gap: 10px; font-size: 14px; color: var(--chrome); }
+.guide li::marker { color: var(--accent); font-family: var(--f-display); }
+.guide b { color: var(--ink); }
+code { font-family: ui-monospace, Menlo, monospace; font-size: 12.5px; background: var(--sunk); border: 1px solid var(--line); border-radius: 6px; padding: 1px 6px; overflow-wrap: anywhere; color: var(--accent); }

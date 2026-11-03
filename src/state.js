@@ -1,5 +1,6 @@
 // Shared app state + derived data + context for the AI coach.
 import * as S from "./store.js";
+import { stepsContext } from "./health.js";
 import { assess, targets, SPORTS, GOALS, waterFor } from "./calc.js";
 import { buildProgram, planFor, trainingHours, phaseOf } from "./program.js";
 import { totals } from "./food.js";
@@ -14,6 +15,7 @@ export const A = {
   workouts: {}, // date -> workout log
   food: {}, // date -> food log
   body: {}, // date -> measurement
+  health: {}, // date -> { steps, km } from Apple Health / manual
   loaded: new Set(),
 };
 
@@ -32,7 +34,7 @@ export async function loadRecent() {
   const from = addDays(mondayOf(today()), -35);
   const to = addDays(today(), 14);
   // Each part loads on its own: one failing never blocks the others.
-  const parts = [["workouts", () => S.range("workouts", from, to)], ["food", () => S.range("food", from, to)], ["body", () => S.latest("body", 120)]];
+  const parts = [["workouts", () => S.range("workouts", from, to)], ["food", () => S.range("food", from, to)], ["body", () => S.latest("body", 120)], ["health", () => S.range("health", from, to)]];
   const res = await Promise.allSettled(parts.map(([, f]) => f()));
   const failed = [];
   res.forEach((r, i) => {
@@ -109,6 +111,7 @@ export function aiContext(extra = "") {
 - Mục tiêu dinh dưỡng: ngày tập ${t.kcal} kcal, ngày nghỉ ${t.restKcal} kcal; đạm ${t.protein}g, béo ${t.fat}g, tinh bột ${t.carbs}g (ngày nghỉ ${t.restCarbs}g), xơ ${t.fiber}g, nước ~${(t.waterBase / 1000).toFixed(1)} lít + 0,5 lít mỗi giờ tập. Dự kiến thay đổi ${t.weekly > 0 ? "−" : "+"}${Math.abs(t.weekly).toFixed(2)} kg/tuần.
 - Lộ trình: tuần ${ph.week}/12 (giai đoạn "${ph.name}"). Lịch tuần: ${week}.
 - Hôm nay: ${todayPlan || "nghỉ"}.
+${stepsContext()}
 - Đã ăn hôm nay: ${eaten ? `${Math.round(eaten.kcal)} kcal, đạm ${Math.round(eaten.p)}g, tinh bột ${Math.round(eaten.c)}g, béo ${Math.round(eaten.f)}g` : "chưa ghi"}.
 - Cân nặng gần đây: ${weights.join("; ") || "chưa có"}.
 ${extra}`;

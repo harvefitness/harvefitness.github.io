@@ -101,3 +101,11 @@ allowedEmails: ["ban@gmail.com", "banthan@gmail.com"],
 - **Firestore**: 50.000 lượt đọc, 20.000 lượt ghi mỗi ngày, 1 GB dữ liệu. Thừa cho vài chục người dùng.
 - **Gemini Developer API (miễn phí)**: giới hạn số câu hỏi mỗi phút và mỗi ngày theo từng model. Google có thể thay đổi mức này. Nếu nhóm dùng nhiều, có thể nâng lên gói Blaze (trả theo dùng) trong Firebase.
 - **Lưu ý**: ở gói miễn phí, Google có thể dùng nội dung câu hỏi gửi Gemini để cải thiện sản phẩm. Đừng nhập thông tin nhạy cảm vào chat.
+
+---
+
+## Lấy số bước từ app Sức khỏe (iPhone)
+
+Website không đọc trực tiếp được app Sức khỏe (Apple chỉ cho app cài từ App Store đọc). Cách làm: tạo một **Phím tắt** tên `DNT Health`. Phím tắt đọc số bước và quãng đường hôm nay, rồi mở `https://ngletam123.github.io/DNT-HARVE-FITNESS-PROVIP/#health-<số bước>-<km>`. Website nhận số liệu và lưu vào tài khoản.
+
+Hướng dẫn từng bước có ngay trong web: **Trang chủ → thẻ "Bước chân hôm nay" → Cách kết nối**. Sau khi tạo phím tắt, nút **Cập nhật từ Apple Health** sẽ tự chạy phím tắt đó.

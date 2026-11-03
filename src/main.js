@@ -4,6 +4,7 @@ import { A, recompute, loadRecent, aiContext, isTrainingDay, waterGoalCups, save
 import { startSetup, renderSetup } from "./v-setup.js";
 import { renderTrain, dayStatus, setTrainDate } from "./v-train.js";
 import { renderFood, snapBar, quickSnap } from "./v-food.js";
+import { stepsCard, stashIncoming, applyPending, openManual, openGuide } from "./health.js";
 import { renderBody } from "./v-body.js";
 import { SPORTS, GOALS } from "./calc.js";
 import { planFor, phaseOf } from "./program.js";
@@ -130,6 +131,7 @@ function renderHome(root) {
         <div class="row gap"><a class="ghost sm" href="#food-log">Nhật ký</a><button class="ghost sm" data-act="cup">+1 cốc nước</button></div>
       </div>
     </section>
+    ${stepsCard()}
     ${next ? `<section class="card"><div class="row between"><span class="eyebrow">Bữa tiếp theo · ${next.time}</span><a class="link" href="#food-plan">Cả ngày</a></div>
       <h3>${esc(next.label)}</h3><p class="muted">${next.items.filter((it) => it.id !== "creatine").map((it) => esc(foodName(it))).join(" · ")}</p></section>` : ""}
     <section class="card"><span class="eyebrow">Tuần này</span>
@@ -154,6 +156,8 @@ function renderHome(root) {
     if (e.target.closest("[data-today]")) setTrainDate(today());
     const snap = e.target.closest("[data-act=snap-photo], [data-act=snap-voice]");
     if (snap) return quickSnap(snap.dataset.act === "snap-photo" ? "photo" : "voice", d, () => renderHome(root));
+    if (e.target.closest("[data-act=health-manual]")) return openManual(() => renderHome(root));
+    if (e.target.closest("[data-act=health-guide]")) return openGuide();
     if (e.target.closest("[data-act=cup]")) {
       const l = (A.food[d] ||= { date: d, meals: {}, water: 0 });
       l.water = (l.water || 0) + 1;
@@ -253,6 +257,7 @@ async function renderChat(root) {
 let lastRoute = "";
 async function route() {
   if (!A.user) return;
+  if (stashIncoming() && A.profile) applyPending();
   const [page = "home", sub = ""] = (location.hash.slice(1).replace(/^\//, "") || "home").split(/[/-]/);
   if (!A.profile && page !== "setup") {
     location.hash = "#setup";
@@ -295,6 +300,7 @@ addEventListener("hashchange", route);
 
 // ---------------------------------------------------------------- Boot
 app.innerHTML = `<div class="splash"><span class="logo xl">DNT<i>&amp;</i>HARVE</span><span class="tag">FITNESS</span></div>`;
+stashIncoming(); // a reading from the Apple Health shortcut may arrive before sign-in
 S.initStore(async (user, reason) => {
   A.user = user;
   if (!user) return renderLogin(reason);
@@ -303,6 +309,7 @@ S.initStore(async (user, reason) => {
     if (A.profile) {
       recompute();
       await loadRecent();
+      applyPending();
     }
   } catch (e) {
     console.error(e);
