@@ -22,7 +22,7 @@ const NAV = [
 
 function shell() {
   app.innerHTML = `<header class="top">
-      <a class="brand" href="#/home" aria-label="Trang chủ"><span class="logo">DNT<i>&amp;</i>HARVE</span><small>FITNESS</small></a>
+      <a class="brand" href="#home" aria-label="Trang chủ"><span class="logo">DNT<i>&amp;</i>HARVE</span><small>FITNESS</small></a>
       <div class="row gap">
         <span id="sync" class="sync" data-s="saved" title="Đã lưu"></span>
         <button class="avatar" id="me" aria-label="Tài khoản">${A.user?.photoURL ? `<img src="${esc(A.user.photoURL)}" alt="" referrerpolicy="no-referrer">` : esc((A.profile?.name || A.user?.displayName || "?").slice(0, 1).toUpperCase())}</button>
@@ -30,12 +30,12 @@ function shell() {
     </header>
     ${S.DEMO ? `<div class="demo-bar">Chế độ thử: dữ liệu chỉ lưu trên máy này, chưa có AI. Điền Firebase vào config.js để chạy thật.</div>` : ""}
     <main id="view"></main>
-    <nav class="bottom" aria-label="Điều hướng">${NAV.map(([k, l, icon]) => `<a href="#/${k}" data-nav="${k}"><svg viewBox="0 0 24 24" aria-hidden="true">${icon}</svg><span>${l}</span></a>`).join("")}</nav>`;
+    <nav class="bottom" aria-label="Điều hướng">${NAV.map(([k, l, icon]) => `<a href="#${k}" data-nav="${k}"><svg viewBox="0 0 24 24" aria-hidden="true">${icon}</svg><span>${l}</span></a>`).join("")}</nav>`;
   $("#me").onclick = () => {
     const menu = document.createElement("div");
     menu.className = "menu";
     menu.innerHTML = `<p><b>${esc(A.user?.displayName || A.profile?.name || "")}</b><br><small class="muted">${esc(A.user?.email || "")}</small></p>
-      <a href="#/setup">Sửa hồ sơ & thói quen</a><a href="#/body">Đánh giá cơ thể</a><button id="logout">Đăng xuất</button>`;
+      <a href="#setup">Sửa hồ sơ & thói quen</a><a href="#body">Đánh giá cơ thể</a><button id="logout">Đăng xuất</button>`;
     document.body.appendChild(menu);
     const close = (e) => {
       if (!menu.contains(e.target) || e.target.closest("a")) {
@@ -104,7 +104,7 @@ function renderHome(root) {
       ${items
         .map((it) =>
           it.kind === "gym"
-            ? `<div class="today-item"><div><h3>${esc(it.name)}</h3><small class="muted">${A.prog.sessions[it.key].exercises.length} bài · ${p.gymMinutes} phút${p.trainTime ? " · " + p.trainTime : ""}</small></div><a class="primary sm" href="#/train/today" data-today>Bắt đầu</a></div>`
+            ? `<div class="today-item"><div><h3>${esc(it.name)}</h3><small class="muted">${A.prog.sessions[it.key].exercises.length} bài · ${p.gymMinutes} phút${p.trainTime ? " · " + p.trainTime : ""}</small></div><a class="primary sm" href="#train-today" data-today>Bắt đầu</a></div>`
             : it.kind === "sport"
             ? `<div class="today-item"><div><h3>${esc(it.name)}</h3><small class="muted">${it.minutes} phút · uống đủ nước, mang điện giải</small></div><span class="pill">Thể thao</span></div>`
             : `<div class="today-item"><div><h3>Ngày nghỉ</h3><small class="muted">Đi bộ nhẹ, giãn cơ, ngủ đủ giấc</small></div></div>`
@@ -117,24 +117,24 @@ function renderHome(root) {
       <div class="eat-r">
         <div class="mbar"><div class="row between"><span>Đạm</span><span class="num">${fmt(eaten.p)}/${A.t.protein}g</span></div>${bar((eaten.p / A.t.protein) * 100)}</div>
         <div class="mbar"><div class="row between"><span>Nước</span><span class="num">${log?.water || 0}/${waterGoalCups(d)} cốc</span></div>${bar(((log?.water || 0) / waterGoalCups(d)) * 100, "chrome")}</div>
-        <div class="row gap"><a class="ghost sm" href="#/food/log">Ghi món ăn</a><button class="ghost sm" data-act="cup">+1 cốc nước</button></div>
+        <div class="row gap"><a class="ghost sm" href="#food-log">Ghi món ăn</a><button class="ghost sm" data-act="cup">+1 cốc nước</button></div>
       </div>
     </section>
-    ${next ? `<section class="card"><div class="row between"><span class="eyebrow">Bữa tiếp theo · ${next.time}</span><a class="link" href="#/food/plan">Cả ngày ›</a></div>
+    ${next ? `<section class="card"><div class="row between"><span class="eyebrow">Bữa tiếp theo · ${next.time}</span><a class="link" href="#food-plan">Cả ngày ›</a></div>
       <h3>${esc(next.label)}</h3><p class="muted">${next.items.filter((it) => it.id !== "creatine").map((it) => esc(foodName(it))).join(" · ")}</p></section>` : ""}
     <section class="card"><span class="eyebrow">Tuần này</span>
       <div class="week mini">${WEEK_ORDER.map((dw, i) => {
         const date = addDays(mon, i);
-        return `<a class="wday" href="#/train/today" data-date="${date}" data-st="${dayStatus(date)}" ${date === d ? "data-today" : ""}><span class="dw">${DOW[dw]}</span><i class="dot"></i></a>`;
+        return `<a class="wday" href="#train-today" data-date="${date}" data-st="${dayStatus(date)}" ${date === d ? "data-today" : ""}><span class="dw">${DOW[dw]}</span><i class="dot"></i></a>`;
       }).join("")}</div>
     </section>
     <section class="card stats">
-      <a href="#/body"><small>Cân nặng</small><b class="num">${fmt(lastW ? +lastW[1].weight : +p.weight, 1)}</b><span class="num ${lastW && firstW && lastW[1].weight - firstW[1].weight < 0 ? "good-t" : ""}">${lastW && firstW && lastW[0] !== firstW[0] ? (lastW[1].weight - firstW[1].weight > 0 ? "+" : "") + fmt(lastW[1].weight - firstW[1].weight, 1) + " kg" : "kg"}</span></a>
-      <a href="#/body"><small>% mỡ</small><b class="num">${fmt(A.as.bf, 1)}</b><span>${esc(A.as.metrics.find((m) => m.key === "bf").cls)}</span></a>
-      <a href="#/body"><small>Mục tiêu</small><b>${esc(GOALS[A.t.goal].vn)}</b><span class="num">${fmt(A.t.kcal)} kcal</span></a>
+      <a href="#body"><small>Cân nặng</small><b class="num">${fmt(lastW ? +lastW[1].weight : +p.weight, 1)}</b><span class="num ${lastW && firstW && lastW[1].weight - firstW[1].weight < 0 ? "good-t" : ""}">${lastW && firstW && lastW[0] !== firstW[0] ? (lastW[1].weight - firstW[1].weight > 0 ? "+" : "") + fmt(lastW[1].weight - firstW[1].weight, 1) + " kg" : "kg"}</span></a>
+      <a href="#body"><small>% mỡ</small><b class="num">${fmt(A.as.bf, 1)}</b><span>${esc(A.as.metrics.find((m) => m.key === "bf").cls)}</span></a>
+      <a href="#body"><small>Mục tiêu</small><b>${esc(GOALS[A.t.goal].vn)}</b><span class="num">${fmt(A.t.kcal)} kcal</span></a>
     </section>
     <section class="quick"><span class="eyebrow">Hỏi nhanh PT</span>
-      <div class="chips wrap">${["Hôm nay mình nên ăn gì trước buổi tập?", "Đau mỏi cơ sau tập thì làm gì?", "Làm sao để giảm mỡ bụng nhanh hơn?", "Mình có nên uống creatine không?"].map((q) => `<a class="chip" href="#/chat" data-ask="${esc(q)}">${esc(q)}</a>`).join("")}</div>
+      <div class="chips wrap">${["Hôm nay mình nên ăn gì trước buổi tập?", "Đau mỏi cơ sau tập thì làm gì?", "Làm sao để giảm mỡ bụng nhanh hơn?", "Mình có nên uống creatine không?"].map((q) => `<a class="chip" href="#chat" data-ask="${esc(q)}">${esc(q)}</a>`).join("")}</div>
     </section>`;
   root.onclick = (e) => {
     const ask = e.target.closest("[data-ask]");
@@ -241,9 +241,9 @@ async function renderChat(root) {
 let lastRoute = "";
 async function route() {
   if (!A.user) return;
-  const [, page = "home", sub = ""] = location.hash.split("/");
+  const [page = "home", sub = ""] = (location.hash.slice(1).replace(/^\//, "") || "home").split(/[/-]/);
   if (!A.profile && page !== "setup") {
-    location.hash = "#/setup";
+    location.hash = "#setup";
     return;
   }
   if (!$("#view")) shell();
@@ -275,7 +275,7 @@ async function route() {
     else renderHome(root);
   } catch (e) {
     console.error(e);
-    root.innerHTML = `<div class="card"><h3>Có lỗi khi hiển thị trang</h3><p class="muted">${esc(e.message)}</p><a class="ghost" href="#/home">Về trang chính</a></div>`;
+    root.innerHTML = `<div class="card"><h3>Có lỗi khi hiển thị trang</h3><p class="muted">${esc(e.message)}</p><a class="ghost" href="#home">Về trang chính</a></div>`;
   }
 }
 addEventListener("hashchange", route);
@@ -296,6 +296,6 @@ S.initStore(async (user, reason) => {
     toast("Không tải được dữ liệu. Kiểm tra mạng.", "bad");
   }
   shell();
-  if (!A.profile) location.hash = "#/setup";
+  if (!A.profile) location.hash = "#setup";
   route();
 });

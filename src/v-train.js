@@ -240,7 +240,7 @@ export async function showExercise(id) {
     f ^= 1;
     b.style.opacity = f;
   }, 900);
-  const cached = localStorage.getItem("tr_" + id);
+  const cached = S.ls.get("tr_" + id);
   if (cached) $("#ex-vn", body).innerHTML = `<div class="ai-box">${md(cached)}</div>`;
   $("#ex-ai", body)?.addEventListener("click", async (e) => {
     const btn = e.currentTarget;
@@ -251,9 +251,7 @@ export async function showExercise(id) {
         `Viết hướng dẫn tập bài "${x.n}"${vn ? ` (${vn})` : ""} bằng tiếng Việt cho người tập gym: 1) Chuẩn bị, 2) Các bước thực hiện (3–5 bước), 3) Lỗi hay gặp (2–3 ý), 4) Cơ chính. Dựa trên hướng dẫn gốc: ${x.i.join(" ")}`,
         AI.PT_SYSTEM
       );
-      try {
-        localStorage.setItem("tr_" + id, txt);
-      } catch {}
+      S.ls.set("tr_" + id, txt);
       $("#ex-vn", body).innerHTML = `<div class="ai-box">${md(txt)}</div>`;
       btn.remove();
     } catch (err) {
@@ -269,7 +267,7 @@ export async function renderTrain(root, sub) {
   sub = ["today", "plan", "library"].includes(sub) ? sub : "today";
   if (!root.querySelector(".subtabs") || root.dataset.sub !== sub) {
     root.dataset.sub = sub;
-    root.innerHTML = `<nav class="subtabs">${[["today", "Buổi tập"], ["plan", "Lộ trình"], ["library", "Thư viện bài tập"]].map(([k, v]) => `<a href="#/train/${k}" ${k === sub ? 'aria-current="page"' : ""}>${v}</a>`).join("")}</nav><div id="train-body"></div>`;
+    root.innerHTML = `<nav class="subtabs">${[["today", "Buổi tập"], ["plan", "Lộ trình"], ["library", "Thư viện bài tập"]].map(([k, v]) => `<a href="#train-${k}" ${k === sub ? 'aria-current="page"' : ""}>${v}</a>`).join("")}</nav><div id="train-body"></div>`;
   }
   const body = $("#train-body", root);
   if (sub === "today") {
@@ -300,7 +298,7 @@ export async function renderTrain(root, sub) {
     const day = e.target.closest(".wday");
     if (day) {
       curDate = day.dataset.date;
-      location.hash = "#/train/today";
+      location.hash = "#train-today";
       return;
     }
     const b = e.target.closest("button[data-act]");

@@ -51,7 +51,7 @@ function renderAssess(root) {
   <p class="muted sm">Phân loại tạng (somatotype) ước tính từ khung xương, % mỡ, khối cơ và cơ địa bạn khai báo. Đây là mô hình mô tả, không phải số phận: ai cũng có thể thay đổi vóc dáng.</p></section>
   ${AI.AI_READY ? `<section class="card"><span class="eyebrow">PT AI nhận xét tổng thể</span><div id="ai-assess">${p.aiAssess ? md(p.aiAssess) : `<p class="muted">Nhờ PT AI đọc toàn bộ chỉ số và nhận xét như buổi tư vấn đầu tiên.</p>`}</div>
     <button class="ghost block" data-act="ai-assess">${p.aiAssess ? "Nhận xét lại" : "Nhận xét giúp tôi"}</button></section>` : ""}
-  <div class="row gap wrap"><a class="ghost" href="#/setup">Sửa hồ sơ & thói quen</a><a class="ghost" href="#/body/progress">Cập nhật số đo</a></div>`;
+  <div class="row gap wrap"><a class="ghost" href="#setup">Sửa hồ sơ & thói quen</a><a class="ghost" href="#body-progress">Cập nhật số đo</a></div>`;
   root.innerHTML = h;
 }
 
@@ -128,7 +128,7 @@ function renderProgress(root) {
 
 export function renderBody(root, sub) {
   sub = ["assess", "progress"].includes(sub) ? sub : "assess";
-  root.innerHTML = `<nav class="subtabs">${[["assess", "Đánh giá"], ["progress", "Số đo & tiến bộ"]].map(([k, v]) => `<a href="#/body/${k}" ${k === sub ? 'aria-current="page"' : ""}>${v}</a>`).join("")}</nav><div id="body-body"></div>`;
+  root.innerHTML = `<nav class="subtabs">${[["assess", "Đánh giá"], ["progress", "Số đo & tiến bộ"]].map(([k, v]) => `<a href="#body-${k}" ${k === sub ? 'aria-current="page"' : ""}>${v}</a>`).join("")}</nav><div id="body-body"></div>`;
   const body = $("#body-body", root);
   sub === "assess" ? renderAssess(body) : renderProgress(body);
   root.onchange = (e) => {

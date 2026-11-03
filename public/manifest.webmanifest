@@ -2,7 +2,7 @@
   "name": "DNT & HARVE FITNESS",
   "short_name": "DNT&HARVE",
   "description": "Huấn luyện viên cá nhân online: đánh giá cơ thể, lộ trình tập, thực đơn và PT AI.",
-  "start_url": "./#/home",
+  "start_url": "./#home",
   "scope": "./",
   "display": "standalone",
   "background_color": "#140D16",

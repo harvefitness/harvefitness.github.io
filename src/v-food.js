@@ -57,7 +57,7 @@ function renderPlan(root) {
     </article>`;
   }
   h += `<div class="row gap wrap"><button class="ghost" data-act="reroll">Đổi thực đơn khác</button>
-    <a class="ghost" href="#/chat" data-prefill="Gợi ý giúp mình thực đơn hôm nay theo món mình thích: ">Nhờ PT AI soạn theo món mình thích</a></div>
+    <a class="ghost" href="#chat" data-prefill="Gợi ý giúp mình thực đơn hôm nay theo món mình thích: ">Nhờ PT AI soạn theo món mình thích</a></div>
     <p class="muted sm">Khẩu phần thịt/cá tính theo trọng lượng đã nấu chín. 100g ≈ 1 lòng bàn tay. Đổi món cùng nhóm (gà ↔ cá ↔ tôm ↔ bò nạc) thoải mái.</p>`;
   root.innerHTML = h;
   root._plan = plan;
@@ -217,7 +217,7 @@ export async function renderFood(root, sub) {
   root.dataset.sub = sub;
   if (!root.querySelector(".subtabs") || root.dataset.drawn !== sub) {
     root.dataset.drawn = sub;
-    root.innerHTML = `<nav class="subtabs">${[["plan", "Thực đơn gợi ý"], ["log", "Nhật ký ăn uống"]].map(([k, v]) => `<a href="#/food/${k}" ${k === sub ? 'aria-current="page"' : ""}>${v}</a>`).join("")}</nav><div id="food-body"></div>`;
+    root.innerHTML = `<nav class="subtabs">${[["plan", "Thực đơn gợi ý"], ["log", "Nhật ký ăn uống"]].map(([k, v]) => `<a href="#food-${k}" ${k === sub ? 'aria-current="page"' : ""}>${v}</a>`).join("")}</nav><div id="food-body"></div>`;
   }
   const body = $("#food-body", root);
   if (sub === "plan") renderPlan(body);

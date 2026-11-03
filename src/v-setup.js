@@ -119,7 +119,7 @@ export function renderSetup(root) {
     <form id="setup-form" novalidate>${stepHtml()}
       <p class="err" id="setup-err" role="alert"></p>
       <div class="row between nav-btns">
-        ${step > 0 ? `<button type="button" class="ghost" data-act="back">Quay lại</button>` : first ? "<span></span>" : `<a class="ghost" href="#/body">Hủy</a>`}
+        ${step > 0 ? `<button type="button" class="ghost" data-act="back">Quay lại</button>` : first ? "<span></span>" : `<a class="ghost" href="#body">Hủy</a>`}
         <button type="submit" class="primary">${step < STEPS_UI.length - 1 ? "Tiếp tục" : first ? "Xem đánh giá của tôi" : "Lưu và tính lại"}</button>
       </div>
     </form></div>`;
@@ -195,7 +195,7 @@ export function renderSetup(root) {
       A.profile = p;
       recompute();
       toast(first ? "Đã tạo hồ sơ. Đây là đánh giá của bạn." : "Đã lưu hồ sơ và tính lại lộ trình.", "good");
-      location.hash = "#/body";
+      location.hash = "#body";
     } catch (e2) {
       console.error(e2);
       btn.disabled = false;

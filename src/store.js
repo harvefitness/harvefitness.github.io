@@ -16,10 +16,21 @@ export function firebaseApp() {
   return app;
 }
 
+// localStorage can be unavailable (private mode, embedded previews): fall back to memory.
+const mem = {};
+export const ls = {
+  get(k) { try { return localStorage.getItem(k); } catch { return mem[k] ?? null; } },
+  set(k, v) { try { localStorage.setItem(k, v); } catch { mem[k] = v; } },
+  del(k) { try { localStorage.removeItem(k); } catch { delete mem[k]; } },
+};
+let onUserCb = null;
+const DEMO_USER = { uid: "demo", displayName: "Chế độ thử", email: "", photoURL: "" };
+
 export function initStore(onUser) {
+  onUserCb = onUser;
   if (DEMO) {
-    const u = { uid: "demo", displayName: "Chế độ thử", email: "", photoURL: "" };
-    currentUser = localStorage.getItem("dnt_demo_signed") ? u : null;
+    const u = DEMO_USER;
+    currentUser = ls.get("dnt_demo_signed") ? u : null;
     uid = currentUser ? "demo" : null;
     setTimeout(() => onUser(currentUser), 0);
     return;
@@ -47,8 +58,10 @@ export function initStore(onUser) {
 
 export async function signIn() {
   if (DEMO) {
-    localStorage.setItem("dnt_demo_signed", "1");
-    location.reload();
+    ls.set("dnt_demo_signed", "1");
+    currentUser = DEMO_USER;
+    uid = "demo";
+    onUserCb(currentUser);
     return;
   }
   const provider = new GoogleAuthProvider();
@@ -64,8 +77,10 @@ export async function signIn() {
 
 export async function signOut() {
   if (DEMO) {
-    localStorage.removeItem("dnt_demo_signed");
-    location.reload();
+    ls.del("dnt_demo_signed");
+    currentUser = null;
+    uid = null;
+    onUserCb(null);
     return;
   }
   await fbSignOut(auth);
@@ -75,15 +90,13 @@ export async function signOut() {
 const demoKey = "dnt_demo_data";
 function demoAll() {
   try {
-    return JSON.parse(localStorage.getItem(demoKey)) || {};
+    return JSON.parse(ls.get(demoKey)) || {};
   } catch {
     return {};
   }
 }
 function demoSave(all) {
-  try {
-    localStorage.setItem(demoKey, JSON.stringify(all));
-  } catch {}
+  ls.set(demoKey, JSON.stringify(all));
 }
 
 // ---------- Public API: users/{uid} and users/{uid}/{col}/{id} ----------
