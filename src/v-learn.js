@@ -17,52 +17,90 @@ const svgSide = (key) =>
       .join("")}
   </svg>`;
 
+let viewer = null;
+const webglOK = () => {
+  try {
+    const c = document.createElement("canvas");
+    return !!(c.getContext("webgl2") || c.getContext("webgl"));
+  } catch {
+    return false;
+  }
+};
+
 export function renderMuscles(root) {
+  viewer?.dispose();
+  viewer = null;
   const names = [...new Set([...BODY_MAP.front, ...BODY_MAP.back].map(([m]) => m).filter((m) => MUSCLES[m] && !m.includes("soleus")))];
+  const use3d = webglOK();
+  const views = [["front", "Trước"], ["right", "Phải"], ["back", "Sau"], ["left", "Trái"]];
+  const stage3d = `<div class="stage3d" id="stage3d"><div class="loading3d">Đang tải mô hình 3D…</div></div>
+    <div class="view-btns">${views.map(([k, v]) => `<button class="chip" data-view="${k}">${v}</button>`).join("")}<button class="chip" data-view="spin" aria-pressed="true">Tự xoay</button></div>`;
+  const stage2d = `<div class="stage" id="stage"><div class="flipper ${side === "back" ? "back" : ""}" id="flipper">
+      <div class="face front">${svgSide("front")}<span class="face-tag">Mặt trước</span></div>
+      <div class="face backface">${svgSide("back")}<span class="face-tag">Mặt sau</span></div></div></div>
+    <button class="ghost sm" data-act="flip">↻ Xoay</button>`;
   root.innerHTML = `<section class="card body3d-card">
-      <span class="eyebrow">Giải phẫu cơ thể</span>
+      <span class="eyebrow">Giải phẫu cơ thể${use3d ? " · 3D" : ""}</span>
       <h2>Chạm vào <em>nhóm cơ.</em></h2>
-      <p class="muted sm">Chạm vào một vùng để xem tên cơ, chức năng, bài tập và cách giãn cơ. Bấm <b>Xoay</b> hoặc vuốt ngang để xem mặt sau.</p>
-      <div class="stage" id="stage">
-        <div class="flipper ${side === "back" ? "back" : ""}" id="flipper">
-          <div class="face front">${svgSide("front")}<span class="face-tag">Mặt trước</span></div>
-          <div class="face backface">${svgSide("back")}<span class="face-tag">Mặt sau</span></div>
-        </div>
-      </div>
-      <div class="row between"><button class="ghost sm" data-act="flip">↻ Xoay ${side === "front" ? "ra sau" : "ra trước"}</button><span class="muted sm" id="m-name">${selected ? esc(MUSCLES[selected].vn) : "Chưa chọn nhóm cơ"}</span></div>
+      <p class="muted sm">${use3d ? "Kéo để xoay 360°, chụm 2 ngón để phóng to. Chạm vào một nhóm cơ để xem tên, chức năng, bài tập và cách giãn cơ." : "Chạm vào một vùng để xem chi tiết. Bấm Xoay để xem mặt sau."}</p>
+      ${use3d ? stage3d : stage2d}
+      <p class="sel-name" id="m-name">${selected ? esc(MUSCLES[selected].vn) : "Chưa chọn nhóm cơ"}</p>
     </section>
     <h2 class="sec">Tất cả <em>nhóm cơ.</em></h2>
-    <div class="chips wrap">${names.map((m) => `<button class="chip" data-m="${m}">${esc(MUSCLES[m].vn)}</button>`).join("")}</div>
+    <div class="chips wrap">${names.map((m) => `<button class="chip" data-m="${m}" aria-pressed="${selected === m}">${esc(MUSCLES[m].vn)}</button>`).join("")}</div>
     <section class="card"><span class="eyebrow">Nguồn tham khảo</span><ul class="src">${ANATOMY_SOURCES.map(([t, u]) => `<li><a href="${u}" target="_blank" rel="noopener">${esc(t)} ↗</a></li>`).join("")}</ul>
-    <p class="muted sm">Nội dung tóm tắt cho người tập phổ thông, không thay thế chẩn đoán y khoa.</p></section>`;
+    <p class="muted sm">Mô hình minh họa vị trí các nhóm cơ chính, không theo đúng tỉ lệ giải phẫu. Nội dung dành cho người tập phổ thông, không thay thế chẩn đoán y khoa.</p></section>`;
 
-  const flipper = $("#flipper", root);
-  // Swipe left / right on the model to rotate it.
-  let x0 = null;
-  const stage = $("#stage", root);
-  stage.onpointerdown = (e) => (x0 = e.clientX);
-  stage.onpointerup = (e) => {
-    if (x0 != null && Math.abs(e.clientX - x0) > 40) flip();
-    x0 = null;
+  const choose = (k, fromModel) => {
+    selected = k;
+    $("#m-name", root).textContent = MUSCLES[k].vn;
+    $$(".chip[data-m]", root).forEach((c) => c.setAttribute("aria-pressed", c.dataset.m === k));
+    $$(".mz", root).forEach((p) => p.classList.toggle("on", MUSCLES[p.dataset.m] === MUSCLES[k]));
+    if (!fromModel) viewer?.select(k);
+    showMuscle(k);
   };
-  function flip() {
+
+  if (use3d) {
+    import("./body3d.js")
+      .then(({ mountBody3D }) => {
+        const st = $("#stage3d", root);
+        if (!st || !st.isConnected) return;
+        st.innerHTML = "";
+        viewer = mountBody3D(st, { onSelect: (k) => choose(k, true) });
+        if (selected) viewer.select(selected, { face: false });
+      })
+      .catch((e) => {
+        console.error(e);
+        const st = $("#stage3d", root);
+        if (st) st.innerHTML = `<div class="loading3d">Không tải được mô hình 3D. Kiểm tra mạng rồi mở lại trang.</div>`;
+      });
+  }
+
+  // 2D fallback: swipe or tap "Xoay" to flip front/back.
+  const stage = $("#stage", root);
+  const flipper = $("#flipper", root);
+  const flip = () => {
     side = side === "front" ? "back" : "front";
-    flipper.classList.toggle("back", side === "back");
-    const b = $("[data-act=flip]", root);
-    if (b) b.textContent = `↻ Xoay ${side === "front" ? "ra sau" : "ra trước"}`;
+    flipper?.classList.toggle("back", side === "back");
+  };
+  if (stage) {
+    let x0 = null;
+    stage.onpointerdown = (e) => (x0 = e.clientX);
+    stage.onpointerup = (e) => {
+      if (x0 != null && Math.abs(e.clientX - x0) > 40) flip();
+      x0 = null;
+    };
   }
   root.onclick = (e) => {
     if (e.target.closest("[data-act=flip]")) return flip();
+    const v = e.target.closest("[data-view]");
+    if (v && viewer) {
+      $$("[data-view]", root).forEach((b) => b.setAttribute("aria-pressed", b === v));
+      return v.dataset.view === "spin" ? viewer.spin(true) : viewer.view(v.dataset.view);
+    }
     const t = e.target.closest("[data-m]");
     if (!t || !MUSCLES[t.dataset.m]) return;
-    selected = t.dataset.m;
-    $$(".mz", root).forEach((p) => p.classList.toggle("on", MUSCLES[p.dataset.m] === MUSCLES[selected]));
-    $("#m-name", root).textContent = MUSCLES[selected].vn;
-    // Turn the model to the side where this muscle is.
-    const onFront = BODY_MAP.front.some(([m]) => m === selected);
-    const onBack = BODY_MAP.back.some(([m]) => m === selected);
-    if ((side === "front" && !onFront && onBack) || (side === "back" && !onBack && onFront)) flip();
-    showMuscle(selected);
+    choose(t.dataset.m, false);
   };
 }
 

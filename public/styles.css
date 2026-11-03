@@ -88,9 +88,10 @@ main { max-width: 640px; margin: 0 auto; padding: 18px max(16px, env(safe-area-i
 .page { display: grid; gap: 16px; }
 .page > div[id$="-body"] { display: grid; gap: 16px; }
 
-.subtabs { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; }
+.subtabs { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 5px; }
 .subtabs::-webkit-scrollbar { display: none; }
-.subtabs a { flex: 1; text-align: center; text-decoration: none; padding: 9px 12px; border-radius: 999px; border: 1px solid var(--line); font-size: 11.5px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); white-space: nowrap; }
+.subtabs a { min-width: 0; text-align: center; text-decoration: none; padding: 9px 2px; border-radius: 999px; border: 1px solid var(--line); font-size: 11.5px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.subtabs:has(a:nth-child(5)) a { font-size: 10px; letter-spacing: .02em; padding: 9px 0; }
 .subtabs a[aria-current="page"] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
 
 /* ---------- Surfaces ---------- */
@@ -544,3 +545,31 @@ code { font-family: ui-monospace, Menlo, monospace; font-size: 12.5px; backgroun
 .kc b { font-family: var(--f-display); font-weight: 400; font-size: 19px; color: var(--accent); line-height: 1.1; }
 .kc small { font-size: 9.5px; }
 .raw { font-size: 11.5px; color: var(--muted); overflow-wrap: anywhere; }
+
+/* ---------- 3D muscle model ---------- */
+.stage3d { position: relative; height: min(118vw, 520px); margin-inline: -8px; border-radius: 18px; overflow: hidden;
+  background: radial-gradient(60% 55% at 50% 45%, color-mix(in srgb, var(--accent) 9%, transparent), transparent 70%); }
+.stage3d canvas { display: block; width: 100% !important; height: 100% !important; cursor: grab; }
+.loading3d { position: absolute; inset: 0; display: grid; place-items: center; color: var(--muted); font-size: 13px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+.view-btns { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; }
+.view-btns .chip { padding: 7px 12px; font-size: 12px; }
+.sel-name { text-align: center; font-family: var(--f-display); font-size: 22px; text-transform: uppercase; color: var(--accent); }
+
+/* ---------- Month calendar ---------- */
+.date-btn { border: 0; background: none; padding: 0; font-family: var(--f-display); font-size: 18px; text-transform: uppercase; color: var(--ink); white-space: nowrap; display: inline-flex; align-items: center; gap: 6px; }
+.date-btn span { color: var(--accent); font-size: 14px; }
+.cal-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.cal-head h2 { font-size: 28px; }
+.cal-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.cal-stats div { background: var(--raised); border-radius: 14px; padding: 10px; text-align: center; display: grid; }
+.cal-stats b { font-family: var(--f-display); font-weight: 400; font-size: 24px; color: var(--accent); line-height: 1.1; }
+.cal-stats small { font-size: 10px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+.cal-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; }
+.cal-w { text-align: center; font-size: 10.5px; font-weight: 800; letter-spacing: .08em; color: var(--muted); padding-bottom: 2px; }
+.cal-d { border: 1px solid var(--line); background: var(--surface); border-radius: 12px; padding: 6px 1px 5px; display: grid; justify-items: center; gap: 3px; min-width: 0; color: var(--ink); }
+.cal-d b { font-family: var(--f-display); font-weight: 400; font-size: 16px; line-height: 1; }
+.cal-d small { font-size: 8.5px; color: var(--muted); line-height: 1.1; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cal-d[data-st="rest"] { opacity: .55; }
+.cal-d[data-today] { border-color: var(--accent); }
+.cal-d[aria-current="date"] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); opacity: 1; }
+.cal-d[aria-current="date"] small { color: color-mix(in srgb, var(--accent-ink) 70%, transparent); }

@@ -37,8 +37,10 @@ export function parseLocaleNumber(raw, ambiguous = "decimal") {
 export function sanitizeReading(steps, km) {
   if (steps == null || steps < 0 || steps > 150000) steps = null;
   if (km != null) {
+    const maxKm = steps ? Math.min(150, steps * 0.0025 + 1) : 150; // stride ≤ 2,5 m
     if (km > 150) km = km / 1000; // sent in metres
-    const maxKm = steps ? steps * 0.0025 + 1 : 150; // stride ≤ 2,5 m
+    // Still absurd → float noise from the shortcut (e.g. "6548999999999,4" = 6.549 km): scale down until plausible.
+    if (km > 150) for (let i = 0; km > maxKm && i < 16; i++) km /= 10;
     if (km > 150 || km > maxKm || km < 0) km = null;
   }
   return { steps: steps != null ? Math.round(steps) : null, km: km != null ? Math.round(km * 100) / 100 : null };
@@ -102,7 +104,6 @@ export function stepsCard() {
     <div class="row between"><span class="eyebrow">Bước chân hôm nay</span>${h?.at ? `<span class="muted sm">${h.source === "apple" ? "Apple Health" : "Nhập tay"} · ${new Date(h.at).toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })}</span>` : ""}</div>
     <div class="steps-row"><b class="steps-big">${fmt(steps)}</b><span class="muted">/ ${fmt(goal)} bước${h?.km ? ` · ${fmt(h.km, 1)} km` : ""}${steps ? ` · ~${fmt(stepKcal(steps))} kcal` : ""}</span></div>
     ${bar((steps / goal) * 100)}
-    ${h?.source === "apple" && h.raw ? `<p class="raw">Phím tắt gửi: <code>${esc(h.raw)}</code></p>` : ""}
     <div class="spark" aria-label="Bước chân 7 ngày">${week.map((w) => `<span title="${shortDate(w.d)}: ${fmt(w.s)} bước" style="--h:${Math.max(4, (w.s / max) * 100)}%" class="${w.s >= goal ? "hit" : ""}${w.d === d ? " now" : ""}"></span>`).join("")}</div>
     <div class="row gap wrap">
       ${isIOS ? `<a class="primary sm" href="${shortcutRunUrl()}" data-act="health-run">Cập nhật từ Apple Health</a>` : ""}
@@ -135,7 +136,7 @@ export function openManual(after) {
 
 export function openGuide() {
   const url = `${siteUrl()}#health-`;
-  const desc = `Lấy tổng số bước chân hôm nay trong app Sức khỏe và làm tròn thành số nguyên. Lấy tổng quãng đường đi bộ và chạy hôm nay trong app Sức khỏe, tính bằng km, làm tròn 1 chữ số thập phân. Sau đó mở URL: ${url}[số bước]-[số km]`;
+  const desc = `Tìm TẤT CẢ mẫu sức khỏe loại Số bước có ngày bắt đầu là hôm nay (không giới hạn số lượng), rồi Tính toán thống kê: TỔNG, làm tròn thành số nguyên không có dấu phân cách. Tìm TẤT CẢ mẫu loại Quãng đường đi bộ + chạy của hôm nay, tính TỔNG, đổi sang km, làm tròn 1 chữ số thập phân. Sau đó mở URL: ${url}[tổng số bước]-[tổng km]`;
   const body = openSheet(`<h2>Kết nối <em>Apple Health.</em></h2>
     <p class="muted">Làm 1 lần trên <b>iPhone</b> (không phải Mac, vì số bước nằm trong app Sức khỏe của iPhone). Phím tắt đọc số bước và quãng đường hôm nay, rồi mở website kèm số liệu. Không cần cài thêm app. Chọn 1 trong 2 cách.</p>
     <div class="seg full"><button class="seg-b" data-way="1" aria-pressed="false">Cách 1 · Từng bước</button><button class="seg-b" data-way="2" aria-pressed="true">Cách 2 · Gõ mô tả</button></div>

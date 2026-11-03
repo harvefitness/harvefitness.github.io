@@ -46,6 +46,7 @@ function lastTime(date, id) {
   return null;
 }
 export function dayStatus(date) {
+  if (A.profile?.programStart && date < A.profile.programStart && !A.workouts[date]) return "rest"; // before the program began
   const items = planFor(A.prog, date);
   const w = A.workouts[date];
   if (!items.some((i) => i.kind !== "rest") && !w?.sessionKey) return "rest";
@@ -72,7 +73,7 @@ function renderToday(root) {
   const ph = phaseOf(A.profile.programStart, date);
   let h = `<div class="row between">
     <div class="datenav"><button class="icon-btn" data-act="prev" aria-label="Ngày trước">‹</button>
-    <b>${date === today() ? "Hôm nay · " : ""}${niceDate(date)}</b>
+    <button class="date-btn" data-act="cal" aria-label="Mở lịch">${date === today() ? "Hôm nay · " : ""}${niceDate(date)} <span aria-hidden="true">▾</span></button>
     <button class="icon-btn" data-act="next" aria-label="Ngày sau">›</button></div>
     ${date !== today() ? `<button class="ghost sm" data-act="today">Hôm nay</button>` : ""}
   </div>
@@ -131,6 +132,66 @@ function renderToday(root) {
   <button class="primary block" data-act="complete" aria-pressed="${!!w?.completed}">${w?.completed ? "Đã hoàn thành buổi tập ✓" : "Hoàn thành buổi tập"}</button>
   <p class="muted sm">Tăng tiến: khi làm đủ số lần cao nhất ở mọi hiệp với kỹ thuật chuẩn, buổi sau tăng tạ (chân +2,5–5 kg, tay +1–2 kg).</p>`;
   root.innerHTML = h;
+}
+
+// ---------------------------------------------------------------- Month calendar
+const MONTHS_VN = ["Tháng 1", "Tháng 2", "Tháng 3", "Tháng 4", "Tháng 5", "Tháng 6", "Tháng 7", "Tháng 8", "Tháng 9", "Tháng 10", "Tháng 11", "Tháng 12"];
+export function openCalendar(current, onPick) {
+  let y = +current.slice(0, 4), m = +current.slice(5, 7) - 1;
+  const body = openSheet(`<div id="cal"></div>`);
+  const draw = () => {
+    const first = new Date(y, m, 1);
+    const days = new Date(y, m + 1, 0).getDate();
+    const lead = (first.getDay() + 6) % 7; // Monday first
+    const ds = (d) => `${y}-${String(m + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+    let done = 0, planned = 0, missed = 0;
+    let cells = "";
+    for (let i = 0; i < lead; i++) cells += `<span></span>`;
+    for (let d = 1; d <= days; d++) {
+      const date = ds(d);
+      const items = planFor(A.prog, date);
+      const st = dayStatus(date);
+      if (st === "done") done++;
+      if (st === "missed") missed++;
+      if (st !== "rest") planned++;
+      const label = items.filter((i) => i.kind !== "rest").map((i) => (i.kind === "gym" ? "Gym" : i.name)).join("+");
+      cells += `<button class="cal-d" data-d="${date}" data-st="${st}" ${date === today() ? "data-today" : ""} ${date === current ? 'aria-current="date"' : ""}>
+        <b class="num">${d}</b><i class="dot"></i><small>${esc(label)}</small></button>`;
+    }
+    $("#cal", body).innerHTML = `<div class="cal-head">
+        <button class="icon-btn" data-mv="-1" aria-label="Tháng trước">‹</button>
+        <h2>${MONTHS_VN[m]} <em>${y}</em></h2>
+        <button class="icon-btn" data-mv="1" aria-label="Tháng sau">›</button></div>
+      <div class="cal-stats"><div><b class="num">${done}</b><small>Đã tập</small></div><div><b class="num">${planned}</b><small>Ngày có lịch</small></div><div><b class="num">${missed}</b><small>Bỏ lỡ</small></div></div>
+      <div class="cal-grid">${["T2", "T3", "T4", "T5", "T6", "T7", "CN"].map((d) => `<span class="cal-w">${d}</span>`).join("")}${cells}</div>
+      <div class="legend"><span><i class="lg done"></i>Xong</span><span><i class="lg partial"></i>Dở</span><span><i class="lg missed"></i>Bỏ lỡ</span><span><i class="lg planned"></i>Sắp tới</span></div>
+      <button class="ghost block" data-pick="${today()}">Về hôm nay</button>`;
+  };
+  // Load the logs of the month being viewed (only recent weeks are loaded at start).
+  const load = async () => {
+    const from = `${y}-${String(m + 1).padStart(2, "0")}-01`, to = `${y}-${String(m + 1).padStart(2, "0")}-31`;
+    try {
+      Object.assign(A.workouts, await S.range("workouts", from, to));
+    } catch {}
+    if (body.isConnected) draw();
+  };
+  body.addEventListener("click", (e) => {
+    const mv = e.target.closest("[data-mv]");
+    if (mv) {
+      m += +mv.dataset.mv;
+      if (m < 0) (m = 11), y--;
+      if (m > 11) (m = 0), y++;
+      draw();
+      load();
+      return;
+    }
+    const d = e.target.closest("[data-d], [data-pick]");
+    if (!d) return;
+    closeSheet();
+    onPick(d.dataset.d || d.dataset.pick);
+  });
+  draw();
+  load();
 }
 
 function sportTips(type) {
@@ -280,7 +341,7 @@ export async function renderTrain(root, sub) {
   sub = ["today", "plan", "burn", "muscles", "library"].includes(sub) ? sub : "today";
   if (!root.querySelector(".subtabs") || root.dataset.sub !== sub) {
     root.dataset.sub = sub;
-    root.innerHTML = `<nav class="subtabs">${[["today", "Buổi tập"], ["plan", "Lộ trình"], ["burn", "Đốt calo"], ["muscles", "Nhóm cơ"], ["library", "Thư viện"]].map(([k, v]) => `<a href="#train-${k}" ${k === sub ? 'aria-current="page"' : ""}>${v}</a>`).join("")}</nav><div id="train-body"></div>`;
+    root.innerHTML = `<nav class="subtabs">${[["today", "Buổi tập"], ["plan", "Lộ trình"], ["library", "Bài tập"], ["muscles", "Nhóm cơ"], ["burn", "Gợi ý"]].map(([k, v]) => `<a href="#train-${k}" ${k === sub ? 'aria-current="page"' : ""}>${v}</a>`).join("")}</nav><div id="train-body"></div>`;
   }
   const body = $("#train-body", root);
   if (sub === "today") {
@@ -327,6 +388,12 @@ export async function renderTrain(root, sub) {
     if (a === "prev" || a === "next" || a === "today") {
       curDate = a === "today" ? today() : addDays(date, a === "prev" ? -1 : 1);
       return rerender();
+    }
+    if (a === "cal") {
+      return openCalendar(date, (d) => {
+        curDate = d;
+        rerender();
+      });
     }
     if (a === "sess") {
       const w = getW(date);

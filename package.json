@@ -11,7 +11,8 @@
   "license": "ISC",
   "dependencies": {
     "esbuild": "0.25.10",
-    "firebase": "13.1.0"
+    "firebase": "13.1.0",
+    "three": "0.186.1"
   },
   "private": true,
   "type": "module"
