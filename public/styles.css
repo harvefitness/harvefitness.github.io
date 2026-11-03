@@ -543,3 +543,4 @@ code { font-family: ui-monospace, Menlo, monospace; font-size: 12.5px; backgroun
 .kc { display: grid; text-align: right; }
 .kc b { font-family: var(--f-display); font-weight: 400; font-size: 19px; color: var(--accent); line-height: 1.1; }
 .kc small { font-size: 9.5px; }
+.raw { font-size: 11.5px; color: var(--muted); overflow-wrap: anywhere; }

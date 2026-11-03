@@ -9,21 +9,54 @@ export const SHORTCUT_NAME = "DNT Health";
 export const shortcutRunUrl = () => `shortcuts://run-shortcut?name=${encodeURIComponent(SHORTCUT_NAME)}`;
 const siteUrl = () => location.href.split("#")[0];
 
-const toNum = (s) => {
-  const n = parseFloat(String(s || "").replace(/[^\d.,]/g, "").replace(/\.(?=\d{3}(\D|$))/g, "").replace(",", "."));
-  return Number.isFinite(n) ? n : null;
-};
 
 /** "#health-8234-5,6" → { steps, km } or null */
+/**
+ * Parse a number written in any locale: "8234", "8.234", "8,234", "6,5", "6.549", "1.234,5", "1,234.5".
+ * `ambiguous`: how to read a single separator followed by exactly 3 digits ("6.549"):
+ * "thousands" (steps) or "decimal" (km).
+ */
+export function parseLocaleNumber(raw, ambiguous = "decimal") {
+  let s = String(raw ?? "").replace(/[^\d.,]/g, "");
+  if (!/\d/.test(s)) return null;
+  const dots = (s.match(/\./g) || []).length, commas = (s.match(/,/g) || []).length;
+  if (dots && commas) {
+    const dec = s.lastIndexOf(".") > s.lastIndexOf(",") ? "." : ",";
+    s = s.split(dec === "." ? "," : ".").join("").replace(dec, ".");
+  } else if (dots + commas > 1) {
+    s = s.replace(/[.,]/g, ""); // several of the same separator → thousands
+  } else if (dots + commas === 1) {
+    const [i, f] = s.split(/[.,]/);
+    s = f.length === 3 && ambiguous === "thousands" && i.length <= 3 ? i + f : `${i}.${f}`;
+  }
+  const n = parseFloat(s);
+  return Number.isFinite(n) ? n : null;
+}
+
+/** Keep only plausible daily values: ≤ 150.000 steps, ≤ 150 km (metres are converted). */
+export function sanitizeReading(steps, km) {
+  if (steps == null || steps < 0 || steps > 150000) steps = null;
+  if (km != null) {
+    if (km > 150) km = km / 1000; // sent in metres
+    const maxKm = steps ? steps * 0.0025 + 1 : 150; // stride ≤ 2,5 m
+    if (km > 150 || km > maxKm || km < 0) km = null;
+  }
+  return { steps: steps != null ? Math.round(steps) : null, km: km != null ? Math.round(km * 100) / 100 : null };
+}
+
+/** "#health-8234-5,6" → { steps, km, raw } or null */
 export function parseHealthHash(hash = location.hash) {
-  const m = decodeURIComponent(hash).match(/^#\/?health[-/]([^-/]+)(?:[-/]([^-/]+))?/i);
+  let raw;
+  try {
+    raw = decodeURIComponent(hash);
+  } catch {
+    raw = hash;
+  }
+  const m = raw.match(/^#\/?health[-/]([^-/]+)(?:[-/]([^-/]+))?/i);
   if (!m) return null;
-  const digits = String(m[1]).split(/[.,](?=\d{1,2}$)/)[0].replace(/\D/g, ""); // drop separators / decimals
-  const steps = digits ? +digits : null;
-  if (steps == null) return null;
-  let km = toNum(m[2]);
-  if (km != null && km > 200) km = km / 1000; // shortcut sent metres
-  return { steps: Math.round(steps), km: km != null ? Math.round(km * 100) / 100 : null };
+  const r = sanitizeReading(parseLocaleNumber(m[1], "thousands"), parseLocaleNumber(m[2], "decimal"));
+  if (r.steps == null) return null;
+  return { ...r, raw: raw.slice(0, 120) };
 }
 
 /** Remember an incoming reading until the person is signed in. */
@@ -43,12 +76,12 @@ export function applyPending() {
   } catch {}
   if (!p) return;
   ls.del("dnt_health_pending");
-  saveSteps(p.date, p.steps, p.km, "apple");
+  saveSteps(p.date, p.steps, p.km, "apple", p.raw);
   toast(`Đã nhận ${fmt(p.steps)} bước${p.km ? ` · ${fmt(p.km, 1)} km` : ""} từ Apple Health.`, "good");
 }
 
-export function saveSteps(date, steps, km, source = "manual") {
-  A.health[date] = { date, steps, km: km ?? A.health[date]?.km ?? null, source, at: Date.now() };
+export function saveSteps(date, steps, km, source = "manual", raw = "") {
+  A.health[date] = { date, steps, km: km ?? null, source, at: Date.now(), ...(raw ? { raw } : {}) };
   saveLater("health", date, () => A.health[date], 0);
 }
 
@@ -58,7 +91,8 @@ export const stepKcal = (steps) => Math.round((steps / 1000) * 0.5 * (+A.profile
 
 export function stepsCard() {
   const d = today();
-  const h = A.health[d];
+  const stored = A.health[d];
+  const h = stored ? { ...stored, km: sanitizeReading(stored.steps, stored.km).km } : null;
   const goal = stepGoal();
   const steps = h?.steps || 0;
   const week = Array.from({ length: 7 }, (_, i) => addDays(d, i - 6)).map((x) => ({ d: x, s: A.health[x]?.steps || 0 }));
@@ -68,6 +102,7 @@ export function stepsCard() {
     <div class="row between"><span class="eyebrow">Bước chân hôm nay</span>${h?.at ? `<span class="muted sm">${h.source === "apple" ? "Apple Health" : "Nhập tay"} · ${new Date(h.at).toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })}</span>` : ""}</div>
     <div class="steps-row"><b class="steps-big">${fmt(steps)}</b><span class="muted">/ ${fmt(goal)} bước${h?.km ? ` · ${fmt(h.km, 1)} km` : ""}${steps ? ` · ~${fmt(stepKcal(steps))} kcal` : ""}</span></div>
     ${bar((steps / goal) * 100)}
+    ${h?.source === "apple" && h.raw ? `<p class="raw">Phím tắt gửi: <code>${esc(h.raw)}</code></p>` : ""}
     <div class="spark" aria-label="Bước chân 7 ngày">${week.map((w) => `<span title="${shortDate(w.d)}: ${fmt(w.s)} bước" style="--h:${Math.max(4, (w.s / max) * 100)}%" class="${w.s >= goal ? "hit" : ""}${w.d === d ? " now" : ""}"></span>`).join("")}</div>
     <div class="row gap wrap">
       ${isIOS ? `<a class="primary sm" href="${shortcutRunUrl()}" data-act="health-run">Cập nhật từ Apple Health</a>` : ""}
@@ -87,9 +122,11 @@ export function openManual(after) {
     </form>`);
   body.querySelector("#hm").onsubmit = (e) => {
     e.preventDefault();
-    const s = toNum(body.querySelector("#hm-s").value);
+    const s = parseLocaleNumber(body.querySelector("#hm-s").value, "thousands");
     if (s == null) return toast("Nhập số bước.", "bad");
-    saveSteps(d, Math.round(s), toNum(body.querySelector("#hm-k").value), "manual");
+    const r = sanitizeReading(s, parseLocaleNumber(body.querySelector("#hm-k").value, "decimal"));
+    if (r.steps == null) return toast("Số bước không hợp lệ.", "bad");
+    saveSteps(d, r.steps, r.km, "manual");
     body.closest(".sheet-wrap").querySelector("[data-close]").click();
     toast("Đã lưu bước chân.", "good");
     after?.();
