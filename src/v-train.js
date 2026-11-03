@@ -5,6 +5,7 @@ import { SPORTS } from "./calc.js";
 import { planFor, PHASES, phaseOf } from "./program.js";
 import { loadLibrary, searchLib, GROUPS, EQUIP_VN, MUSCLE_VN, CAT_VN, LEVEL_VN, imgUrl, libById, exName, exCue } from "./exercises.js";
 import * as AI from "./ai.js";
+import { renderMuscles, renderBurn } from "./v-learn.js";
 import { esc, num, fmt, today, addDays, niceDate, shortDate, DOW, DOW_LONG, WEEK_ORDER, mondayOf, $, $$, openSheet, closeSheet, toast, md, bar } from "./ui.js";
 
 let curDate = today();
@@ -276,16 +277,18 @@ export async function showExercise(id) {
 
 // ---------------------------------------------------------------- Router entry
 export async function renderTrain(root, sub) {
-  sub = ["today", "plan", "library"].includes(sub) ? sub : "today";
+  sub = ["today", "plan", "burn", "muscles", "library"].includes(sub) ? sub : "today";
   if (!root.querySelector(".subtabs") || root.dataset.sub !== sub) {
     root.dataset.sub = sub;
-    root.innerHTML = `<nav class="subtabs">${[["today", "Buổi tập"], ["plan", "Lộ trình"], ["library", "Thư viện bài tập"]].map(([k, v]) => `<a href="#train-${k}" ${k === sub ? 'aria-current="page"' : ""}>${v}</a>`).join("")}</nav><div id="train-body"></div>`;
+    root.innerHTML = `<nav class="subtabs">${[["today", "Buổi tập"], ["plan", "Lộ trình"], ["burn", "Đốt calo"], ["muscles", "Nhóm cơ"], ["library", "Thư viện"]].map(([k, v]) => `<a href="#train-${k}" ${k === sub ? 'aria-current="page"' : ""}>${v}</a>`).join("")}</nav><div id="train-body"></div>`;
   }
   const body = $("#train-body", root);
   if (sub === "today") {
     await loadDay("workouts", curDate);
     renderToday(body);
   } else if (sub === "plan") renderPlan(body);
+  else if (sub === "burn") renderBurn(body);
+  else if (sub === "muscles") renderMuscles(body);
   else await renderLibrary(body);
 
   if (root._bound) return;

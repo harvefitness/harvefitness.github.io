@@ -1,6 +1,7 @@
 // Shared app state + derived data + context for the AI coach.
 import * as S from "./store.js";
 import { stepsContext } from "./health.js";
+import { physiquesFor } from "./anatomy.js";
 import { assess, targets, SPORTS, GOALS, waterFor } from "./calc.js";
 import { buildProgram, planFor, trainingHours, phaseOf } from "./program.js";
 import { totals } from "./food.js";
@@ -103,7 +104,7 @@ export function aiContext(extra = "") {
   const ph = phaseOf(p.programStart);
   return `NGỮ CẢNH NGƯỜI DÙNG (hôm nay ${d}, ${DOW_LONG[new Date().getDay()]}):
 - Tên: ${p.name || "?"}; ${p.sex === "male" ? "Nam" : "Nữ"}, ${p.age} tuổi, cao ${p.height} cm, nặng ${p.weight} kg. Vòng cổ ${p.neck || "?"}, eo ${p.waist || "?"}, mông ${p.hip || "?"}, cổ tay ${p.wrist || "?"} cm.
-- Mục tiêu: ${GOALS[p.goal]?.vn || p.goal}. Ưu tiên vùng: ${(p.focus || []).join(", ") || "không"}. Cân nặng mong muốn: ${p.targetWeight || "chưa đặt"}.
+- Mục tiêu: ${GOALS[p.goal]?.vn || p.goal}. Dáng mong muốn: ${physiquesFor(p.sex)[p.physique]?.vn || "chưa chọn"}. Ưu tiên vùng: ${(p.focus || []).join(", ") || "không"}. Cân nặng mong muốn: ${p.targetWeight || "chưa đặt"}.
 - Kinh nghiệm gym: ${["mới tập", "6–24 tháng", "trên 2 năm"][+p.level || 0]}; tập ở: ${{ g: "phòng gym", h: "nhà có tạ đơn", b: "nhà không dụng cụ" }[p.place || "g"]}; gym ${(p.gymDays || []).length} buổi/tuần × ${p.gymMinutes || 60} phút lúc ${p.trainTime || "?"}.
 - Môn thể thao khác: ${sports.join("; ") || "không"}.
 - Sinh hoạt: dậy ${p.wakeTime || "?"}, ngủ ${p.bedTime || "?"} (${a.sleep ? a.sleep.toFixed(1) + " giờ" : "?"}), ${p.meals || 3} bữa/ngày, công việc: ${p.job}, bước chân: ${p.steps}, rượu bia: ${p.alcohol || "không"}, ăn chay: ${p.diet === "veg" ? "có" : "không"}. Thực phẩm bổ sung: ${(p.supps || []).join(", ") || "không"}. Chấn thương: ${(p.injuries || []).join(", ") || "không"}. Ghi chú: ${p.notes || "-"}.

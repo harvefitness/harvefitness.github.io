@@ -3,6 +3,7 @@ import { A, recompute } from "./state.js";
 import * as S from "./store.js";
 import { SPORTS, GOALS, JOBS, STEPS } from "./calc.js";
 import { LEVEL_OPTS, PLACES, FOCUS, INJURIES } from "./program.js";
+import { physiquesFor } from "./anatomy.js";
 import { esc, num, toast, today, DOW, WEEK_ORDER, $ } from "./ui.js";
 
 const STEPS_UI = ["Cơ bản", "Số đo", "Mục tiêu", "Tập luyện", "Sinh hoạt"];
@@ -61,7 +62,10 @@ function stepHtml() {
       <div class="cards">${Object.entries(GOALS)
         .map(([k, g]) => `<button type="button" class="opt" data-k="goal" data-v="${k}" aria-pressed="${d.goal === k}"><b>${g.vn}</b><small>${g.desc}</small></button>`)
         .join("")}</div>
-      <div class="fld"><span>Vùng muốn ưu tiên (chọn nhiều)</span>${chips("focus", FOCUS, true)}</div>
+      <div class="fld"><span>Dáng mong muốn</span><div class="cards">${Object.entries(physiquesFor(d.sex))
+        .map(([k, ph]) => `<button type="button" class="opt" data-k="physique" data-v="${k}" aria-pressed="${d.physique === k}"><b>${ph.vn}</b><small>${ph.desc}</small></button>`)
+        .join("")}</div><small>Website sẽ tự ưu tiên vùng cơ, mức mỡ mục tiêu và cardio cho dáng này.</small></div>
+      <div class="fld"><span>Vùng muốn ưu tiên thêm (chọn nhiều)</span>${chips("focus", FOCUS, true)}</div>
       ${field("targetWeight", "Cân nặng mong muốn (kg, không bắt buộc)", 'inputmode="decimal"')}
       <div class="fld"><span>Cơ địa của bạn</span>${chips("gainEase", { hard: "Khó tăng cân", normal: "Bình thường", easy: "Dễ tăng cân / tích mỡ" })}</div>`;
     case 3:
@@ -108,6 +112,7 @@ function validate() {
     if (!(num(d.weight) >= 30 && num(d.weight) <= 250)) return "Nhập cân nặng bằng kg, ví dụ 55.";
   }
   if (step === 2 && !d.goal) return "Chọn một mục tiêu.";
+  if (step === 2 && d.physique && !physiquesFor(d.sex)[d.physique]) d.physique = "";
   if (step === 3 && !d.gymDays.length && !d.sports.length) return "Chọn ít nhất 1 ngày tập gym hoặc thêm 1 môn thể thao.";
   return "";
 }

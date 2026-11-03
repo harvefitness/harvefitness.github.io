@@ -3,6 +3,7 @@
 // Output: weekly calendar, sessions with exercises, 12-week phases, coaching notes.
 import { SPORTS } from "./calc.js";
 import { exName, exCue } from "./exercises.js";
+import { physiquesFor } from "./anatomy.js";
 import { WEEK_ORDER, DOW_LONG, daysBetween, today, clamp } from "./ui.js";
 
 // Slot = movement pattern. Options in preference order:
@@ -158,7 +159,8 @@ export function buildProgram(p, a) {
   const level = clamp(+p.level || 0, 0, 2);
   const place = p.place || "g";
   const injuries = p.injuries || [];
-  const focus = p.focus || [];
+  const phys = physiquesFor(p.sex)[p.physique];
+  const focus = [...new Set([...(p.focus || []), ...(phys?.focus || [])])];
   const female = p.sex !== "male";
   const gymDays = (p.gymDays || []).map(Number);
   const sports = (p.sports || []).filter((s) => SPORTS[s.type] && s.days?.length);
@@ -268,6 +270,8 @@ export function buildProgram(p, a) {
   if (total >= 6) notes.push(`Bạn vận động ${total} buổi/tuần. Giữ ít nhất 1 ngày nghỉ hoàn toàn và ngủ 7–9 tiếng, nếu không cơ sẽ không kịp phục hồi.`);
   if (a.sleep && a.sleep < 7) notes.push(`Bạn đang ngủ khoảng ${a.sleep.toFixed(1).replace(".", ",")} tiếng. Thiếu ngủ làm giảm sức mạnh và tăng cảm giác thèm ăn. Hãy cố ngủ đủ 7 tiếng trước khi tăng khối lượng tập.`);
   if (injuries.length) notes.push(`Đã loại các bài dễ gây đau cho: ${injuries.map((i) => INJURIES[i]).join(", ")}. Đau nhói (khác với mỏi cơ) thì dừng bài đó ngay.`);
+  if (phys) notes.unshift(`Dáng mong muốn ${phys.vn}: ${phys.note} Giáo án đã ưu tiên: ${focus.map((f) => FOCUS[f]).join(", ")}.`);
+  if (phys?.cardio === "high" && cardio && !cardio.extra) cardio = { text: cardio.text + " Dáng này cần thêm 2–3 buổi cardio 30 phút/tuần (xem tab Đốt calo).", extra: true };
   if (a.bodyType) notes.push(`Tạng người ${a.bodyType.vn}: ${a.bodyType.train}`);
   if (level === 0) notes.push("Người mới: chọn mức tạ sao cho hết hiệp vẫn còn sức làm thêm 2–3 lần (RIR 2–3). Quay video form từ bên hông để tự kiểm tra.");
 

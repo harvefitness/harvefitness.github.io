@@ -502,3 +502,44 @@ body:has(.login) { padding-bottom: 0; }
 code { font-family: ui-monospace, Menlo, monospace; font-size: 12.5px; background: var(--sunk); border: 1px solid var(--line); border-radius: 6px; padding: 1px 6px; overflow-wrap: anywhere; color: var(--accent); }
 .way { display: grid; gap: 12px; }
 .desc-box { background: var(--sunk); border: 1px dashed var(--accent); border-radius: 14px; padding: 12px 14px; font-size: 13.5px; line-height: 1.55; user-select: all; -webkit-user-select: all; overflow-wrap: anywhere; }
+
+/* ---------- Muscle map ---------- */
+.stage { perspective: 1100px; display: grid; place-items: center; padding: 6px 0; touch-action: pan-y; }
+.flipper { position: relative; width: min(62vw, 270px); aspect-ratio: 1 / 2; transform-style: preserve-3d; transition: transform .7s cubic-bezier(.3, .7, .2, 1); }
+.flipper.back { transform: rotateY(180deg); }
+.face { position: absolute; inset: 0; backface-visibility: hidden; -webkit-backface-visibility: hidden; display: grid; }
+.face.backface { transform: rotateY(180deg); }
+.face-tag { position: absolute; left: 50%; bottom: -4px; transform: translateX(-50%); font-size: 10px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
+.bodysvg { width: 100%; height: 100%; filter: drop-shadow(0 18px 24px rgba(0, 0, 0, .6)); }
+.mz { fill: #4a4b4f; stroke: var(--bg); stroke-width: .5; cursor: pointer; transition: fill .2s; }
+.mz.head { fill: #3a3b3e; cursor: default; }
+.mz:hover { fill: #6b6d70; }
+.mz.on { fill: var(--accent); }
+.src { margin: 0; padding-left: 18px; display: grid; gap: 6px; font-size: 13.5px; }
+.src a { color: var(--accent); text-decoration: none; }
+.latin { font-style: italic; color: var(--accent); font-size: 13.5px; margin-top: -4px; }
+.kv { display: grid; gap: 4px; font-size: 14px; color: var(--chrome); }
+.kv b { font-size: 10.5px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
+.kv ul { margin: 0; padding-left: 18px; display: grid; gap: 3px; }
+.kv li::marker, .cue li::marker { color: inherit; }
+.cue ul { margin: 6px 0 0; padding-left: 18px; display: grid; gap: 4px; }
+.mini-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.mini-ex { border: 1px solid var(--line); background: var(--raised); border-radius: 14px; padding: 0; overflow: hidden; display: grid; text-align: left; }
+.mini-ex img { width: 100%; aspect-ratio: 1; object-fit: cover; background: #fff; display: block; }
+.mini-ex span { font-size: 11.5px; font-weight: 700; padding: 6px 8px 8px; line-height: 1.25; }
+
+/* ---------- Calorie burn ---------- */
+.card.lime h2 em.ink { color: var(--accent-ink); text-decoration: underline; text-decoration-thickness: 3px; text-underline-offset: 4px; }
+.card.lime p { font-size: 14px; }
+.burn-sugg { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; }
+.burn-sugg .lane p b { font-family: var(--f-display); font-weight: 400; font-size: 24px; color: var(--accent); }
+.burn-list { display: grid; border: 1px solid var(--line); border-radius: var(--r); background: var(--surface); overflow: hidden; }
+.burn-row { display: grid; grid-template-columns: 1fr 64px 64px; gap: 8px; align-items: center; padding: 11px 14px; border-top: 1px solid var(--line); }
+.burn-row:first-child { border-top: 0; }
+.burn-row > div:first-child { display: grid; gap: 2px; min-width: 0; font-size: 14px; }
+.burn-row small { font-size: 11px; color: var(--muted); }
+.burn-row.doing { background: color-mix(in srgb, var(--accent) 7%, transparent); }
+.burn-row .pill { justify-self: start; padding: 3px 8px; font-size: 9px; }
+.kc { display: grid; text-align: right; }
+.kc b { font-family: var(--f-display); font-weight: 400; font-size: 19px; color: var(--accent); line-height: 1.1; }
+.kc small { font-size: 9.5px; }

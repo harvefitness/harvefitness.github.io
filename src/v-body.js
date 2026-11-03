@@ -3,6 +3,7 @@ import { A, recompute, aiContext } from "./state.js";
 import * as S from "./store.js";
 import { assess, GOALS } from "./calc.js";
 import * as AI from "./ai.js";
+import { physiqueCard } from "./v-learn.js";
 import { esc, num, fmt, today, shortDate, parseDate, $, toast, md } from "./ui.js";
 
 const ST_VN = { good: "Tốt", ok: "Ổn", warn: "Lưu ý", bad: "Cần cải thiện" };
@@ -47,6 +48,7 @@ function renderAssess(root) {
       <p>${esc(m.explain)}</p><p class="ref">Chuẩn: ${esc(m.ref)}</p></details>`
     )
     .join("")}</div>
+  ${physiqueCard()}
   <section class="card"><span class="eyebrow">Tạng người & cách tập</span><p><b>${esc(bt.vn)}.</b> ${esc(bt.train)}</p>
   <p class="muted sm">Phân loại tạng (somatotype) ước tính từ khung xương, % mỡ, khối cơ và cơ địa bạn khai báo. Đây là mô hình mô tả, không phải số phận: ai cũng có thể thay đổi vóc dáng.</p></section>
   ${AI.AI_READY ? `<section class="card"><span class="eyebrow">PT AI nhận xét tổng thể</span><div id="ai-assess">${p.aiAssess ? md(p.aiAssess) : `<p class="muted">Nhờ PT AI đọc toàn bộ chỉ số và nhận xét như buổi tư vấn đầu tiên.</p>`}</div>
