@@ -5,12 +5,12 @@
 // ============================================================================
 window.APP_CONFIG = {
   firebase: {
-    apiKey: "",
-    authDomain: "",
-    projectId: "",
-    storageBucket: "",
-    messagingSenderId: "",
-    appId: "",
+    apiKey: "AIzaSyDagWi4QFWk0a2uapwCPiwxgjNKXie8Oyo",
+    authDomain: "dnt-harve-fitness.firebaseapp.com",
+    projectId: "dnt-harve-fitness",
+    storageBucket: "dnt-harve-fitness.firebasestorage.app",
+    messagingSenderId: "632325348206",
+    appId: "1:632325348206:web:114bffbc7b3f7f0ecfff7f",
   },
 
   // Model Gemini, thử lần lượt từ trái sang phải.
