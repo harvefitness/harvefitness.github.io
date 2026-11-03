@@ -3,13 +3,13 @@ import * as S from "./store.js";
 import { A, recompute, loadRecent, aiContext, isTrainingDay, waterGoalCups, saveLater } from "./state.js";
 import { startSetup, renderSetup } from "./v-setup.js";
 import { renderTrain, dayStatus, setTrainDate } from "./v-train.js";
-import { renderFood } from "./v-food.js";
+import { renderFood, snapBar, quickSnap } from "./v-food.js";
 import { renderBody } from "./v-body.js";
 import { SPORTS, GOALS } from "./calc.js";
 import { planFor, phaseOf } from "./program.js";
 import { totals, mealPlan, itemView } from "./food.js";
 import * as AI from "./ai.js";
-import { esc, fmt, today, addDays, niceDate, mondayOf, DOW, WEEK_ORDER, hm, $, toast, md, bar } from "./ui.js";
+import { esc, fmt, today, addDays, niceDate, mondayOf, DOW, WEEK_ORDER, hm, $, toast, md, bar, closeSheet } from "./ui.js";
 
 const app = document.getElementById("app");
 const NAV = [
@@ -120,13 +120,14 @@ function renderHome(root) {
         )
         .join("")}
     </section>
+    ${snapBar()}
     <section class="card eat">
       <div class="ring"><svg viewBox="0 0 100 100" aria-hidden="true"><circle cx="50" cy="50" r="42" class="ring-bg"/><circle cx="50" cy="50" r="42" class="ring-fg" stroke-dasharray="${(pct * C).toFixed(1)} ${C.toFixed(1)}" transform="rotate(-90 50 50)"/></svg>
         <div><b class="num">${fmt(eaten.kcal)}</b><small>/ ${fmt(kcalT)} kcal</small></div></div>
       <div class="eat-r">
         <div class="mbar"><div class="row between"><span>Đạm</span><span class="num">${fmt(eaten.p)}/${A.t.protein}g</span></div>${bar((eaten.p / A.t.protein) * 100)}</div>
         <div class="mbar"><div class="row between"><span>Nước</span><span class="num">${log?.water || 0}/${waterGoalCups(d)} cốc</span></div>${bar(((log?.water || 0) / waterGoalCups(d)) * 100, "chrome")}</div>
-        <div class="row gap"><a class="ghost sm" href="#food-log">Ghi món ăn</a><button class="ghost sm" data-act="cup">+1 cốc nước</button></div>
+        <div class="row gap"><a class="ghost sm" href="#food-log">Nhật ký</a><button class="ghost sm" data-act="cup">+1 cốc nước</button></div>
       </div>
     </section>
     ${next ? `<section class="card"><div class="row between"><span class="eyebrow">Bữa tiếp theo · ${next.time}</span><a class="link" href="#food-plan">Cả ngày</a></div>
@@ -151,6 +152,8 @@ function renderHome(root) {
     const wd = e.target.closest("[data-date]");
     if (wd) setTrainDate(wd.dataset.date);
     if (e.target.closest("[data-today]")) setTrainDate(today());
+    const snap = e.target.closest("[data-act=snap-photo], [data-act=snap-voice]");
+    if (snap) return quickSnap(snap.dataset.act === "snap-photo" ? "photo" : "voice", d, () => renderHome(root));
     if (e.target.closest("[data-act=cup]")) {
       const l = (A.food[d] ||= { date: d, meals: {}, water: 0 });
       l.water = (l.water || 0) + 1;
@@ -255,6 +258,7 @@ async function route() {
     location.hash = "#setup";
     return;
   }
+  closeSheet();
   if (!$("#view")) shell();
   const view = $("#view");
   const key = page + "/" + sub;

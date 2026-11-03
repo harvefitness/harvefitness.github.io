@@ -82,10 +82,6 @@ function renderLog(root) {
     <div class="datenav"><button class="icon-btn" data-act="lprev" aria-label="Ngày trước">‹</button><b>${date === today() ? "Hôm nay · " : ""}${niceDate(date)}</b><button class="icon-btn" data-act="lnext" aria-label="Ngày sau">›</button></div>
     <span class="pill ${training ? "accent" : ""}">${training ? "Ngày tập" : "Ngày nghỉ"}</span>
   </div>
-  ${AI.AI_READY ? `<div class="quick-snap">
-    <button class="primary" data-act="snap-photo"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>Chụp món</button>
-    <button class="primary" data-act="snap-voice"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>Nói món</button>
-  </div>` : ""}
   <section class="card analysis">
     <div class="score-row">
       <div class="score ${g.k}"><b class="num">${an.score ?? "–"}</b><small>/100</small></div>
@@ -314,13 +310,40 @@ function openAdd(slot, onDone, { start } = {}) {
   if (start === "voice" && mode === "ai") toggleVoice();
 }
 
+// ---------------------------------------------------------------- Quick photo / voice capture
+export const snapBar = () =>
+  AI.AI_READY
+    ? `<div class="quick-snap">
+    <button class="primary" data-act="snap-photo"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>Chụp món</button>
+    <button class="primary" data-act="snap-voice"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>Nói món</button>
+  </div>`
+    : "";
+
+/** Open the AI capture sheet (photo or voice) for a date; must be called from a tap. */
+export function quickSnap(kind, date = today(), after) {
+  const now = new Date();
+  const slot = date === today() ? slotForTime(`${now.getHours()}:${now.getMinutes()}`) : "phu";
+  openAdd(
+    slot,
+    (items) => {
+      const log = getLog(date);
+      (log.meals[slot] ||= []).push(...items);
+      delete log.aiReview;
+      saveLater("food", date, () => A.food[date], 300);
+      toast(`Đã thêm ${items.length} món vào ${MEAL_SLOTS[slot].toLowerCase()}.`, "good");
+      after?.();
+    },
+    { start: kind }
+  );
+}
+
 // ---------------------------------------------------------------- Router entry
 export async function renderFood(root, sub) {
   sub = ["plan", "log"].includes(sub) ? sub : "plan";
   root.dataset.sub = sub;
   if (!root.querySelector(".subtabs") || root.dataset.drawn !== sub) {
     root.dataset.drawn = sub;
-    root.innerHTML = `<nav class="subtabs">${[["plan", "Thực đơn gợi ý"], ["log", "Nhật ký ăn uống"]].map(([k, v]) => `<a href="#food-${k}" ${k === sub ? 'aria-current="page"' : ""}>${v}</a>`).join("")}</nav><div id="food-body"></div>`;
+    root.innerHTML = `<nav class="subtabs">${[["plan", "Thực đơn gợi ý"], ["log", "Nhật ký ăn uống"]].map(([k, v]) => `<a href="#food-${k}" ${k === sub ? 'aria-current="page"' : ""}>${v}</a>`).join("")}</nav>${snapBar()}<div id="food-body"></div>`;
   }
   const body = $("#food-body", root);
   if (sub === "plan") renderPlan(body);
@@ -375,17 +398,12 @@ export async function renderFood(root, sub) {
       return redraw();
     }
     if (a === "snap-photo" || a === "snap-voice") {
-      const now = new Date();
-      const slot = logDate === today() ? slotForTime(`${now.getHours()}:${now.getMinutes()}`) : "phu";
-      const d = logDate;
-      openAdd(slot, (items) => {
-        const log = getLog(d);
-        (log.meals[slot] ||= []).push(...items);
-        delete log.aiReview;
-        save(d);
-        toast(`Đã thêm ${items.length} món vào ${MEAL_SLOTS[slot].toLowerCase()}.`, "good");
+      const d = root.dataset.sub === "log" ? logDate : today();
+      quickSnap(a === "snap-photo" ? "photo" : "voice", d, () => {
+        logDate = d;
+        location.hash = "#food-log";
         redraw();
-      }, { start: a === "snap-photo" ? "photo" : "voice" });
+      });
       return;
     }
     if (a === "add") {
