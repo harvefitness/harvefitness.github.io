@@ -4,7 +4,7 @@ Tổng thời gian khoảng 20–30 phút, **hoàn toàn miễn phí**. Bạn ch
 
 | Dịch vụ | Dùng để | Chi phí |
 | --- | --- | --- |
-| GitHub Pages | Chứa website, cho link `https://ngletam123.github.io/dnt-harve-fitness-provip/` | Miễn phí |
+| GitHub Pages | Chứa website, cho link `https://harvefitness.github.io/dnt-harve-fitness-provip/` | Miễn phí |
 | Firebase Authentication | Đăng nhập bằng Google | Miễn phí |
 | Cloud Firestore | Lưu dữ liệu riêng từng người | Miễn phí đến 50.000 lượt đọc/ngày |
 | Firebase AI Logic (Gemini) | Chat PT AI, ước tính calo, nhận xét bữa ăn | Miễn phí (có giới hạn số câu hỏi mỗi phút/ngày) |
@@ -34,7 +34,7 @@ Tổng thời gian khoảng 20–30 phút, **hoàn toàn miễn phí**. Bạn ch
 
 1. Menu trái chọn **Build → Authentication**, rồi bấm **Get started**.
 2. Tab **Sign-in method** → chọn **Google** → bật **Enable** → chọn email hỗ trợ (Gmail của bạn) → **Save**.
-3. Tab **Settings → Authorized domains** → **Add domain** → nhập `ngletam123.github.io` → **Add**.
+3. Tab **Settings → Authorized domains** → **Add domain** → nhập `harvefitness.github.io` → **Add**.
 
 ## Bước 4: Tạo cơ sở dữ liệu
 
@@ -67,7 +67,7 @@ Quy tắc này nghĩa là mỗi người chỉ đọc và ghi được dữ li�
 Sau khi Claude đẩy code lên (hoặc bạn sửa `public/config.js` trên GitHub), đợi 1–2 phút để GitHub tự build. Kiểm tra ở tab **Actions** trong kho (dấu ✓ xanh là xong). Rồi mở:
 
 ```
-https://ngletam123.github.io/dnt-harve-fitness-provip/
+https://harvefitness.github.io/dnt-harve-fitness-provip/
 ```
 
 **Thêm vào màn hình chính như app:**
@@ -106,7 +106,7 @@ allowedEmails: ["ban@gmail.com", "banthan@gmail.com"],
 
 ## Lấy số bước từ app Sức khỏe (iPhone)
 
-Website không đọc trực tiếp được app Sức khỏe (Apple chỉ cho app cài từ App Store đọc). Cách làm: tạo một **Phím tắt** tên `DNT Health`. Phím tắt đọc số bước và quãng đường hôm nay, rồi mở `https://ngletam123.github.io/DNT-HARVE-FITNESS-PROVIP/#health-<số bước>-<km>`. Website nhận số liệu và lưu vào tài khoản.
+Website không đọc trực tiếp được app Sức khỏe (Apple chỉ cho app cài từ App Store đọc). Cách làm: tạo một **Phím tắt** tên `DNT Health`. Phím tắt đọc số bước và quãng đường hôm nay, rồi mở `https://harvefitness.github.io/#health-<số bước>-<km>`. Website nhận số liệu và lưu vào tài khoản.
 
 Hướng dẫn có ngay trong web: **Trang chủ → thẻ "Bước chân hôm nay" → Cách kết nối**, gồm 2 cách:
 - **Cách 1, từng bước:** tự thêm các tác vụ Tìm mẫu sức khỏe → Tính toán thống kê → Làm tròn số → URL → Mở URL.
