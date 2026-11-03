@@ -95,7 +95,7 @@ function renderLog(root) {
   </section>
   <section class="card water">
     <div class="row between"><span class="eyebrow">Nước · ${log.water || 0}/${cups} cốc 250ml</span></div>
-    <div class="cups">${Array.from({ length: cups }, (_, i) => `<button class="cup" data-act="water" data-i="${i}" aria-pressed="${i < (log.water || 0)}" aria-label="Cốc ${i + 1}"></button>`).join("")}</div>
+    <div class="cups">${Array.from({ length: Math.max(cups, log.water || 0) }, (_, i) => `<button class="cup" data-act="water" data-i="${i}" aria-pressed="${i < (log.water || 0)}" aria-label="Cốc ${i + 1}"></button>`).join("")}</div>
   </section>`;
   for (const [k, label] of Object.entries(MEAL_SLOTS)) {
     const items = log.meals?.[k] || [];

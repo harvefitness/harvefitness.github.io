@@ -128,7 +128,11 @@ function renderHome(root) {
       <div class="eat-r">
         <div class="mbar"><div class="row between"><span>Đạm</span><span class="num">${fmt(eaten.p)}/${A.t.protein}g</span></div>${bar((eaten.p / A.t.protein) * 100)}</div>
         <div class="mbar"><div class="row between"><span>Nước</span><span class="num">${log?.water || 0}/${waterGoalCups(d)} cốc</span></div>${bar(((log?.water || 0) / waterGoalCups(d)) * 100, "chrome")}</div>
-        <div class="row gap"><a class="ghost sm" href="#food-log">Nhật ký</a><button class="ghost sm" data-act="cup">+1 cốc nước</button></div>
+        <a class="ghost sm" href="#food-log">Nhật ký ăn uống</a>
+      </div>
+      <div class="water-home">
+        <div class="cups">${Array.from({ length: Math.max(waterGoalCups(d), log?.water || 0) }, (_, i) => `<button class="cup" data-act="water" data-i="${i}" aria-pressed="${i < (log?.water || 0)}" aria-label="Cốc nước ${i + 1}"></button>`).join("")}</div>
+        <p class="hint">Chạm vào 1 ly mỗi khi bạn uống xong 1 cốc nước (250ml). Chạm lại để bỏ.</p>
       </div>
     </section>
     ${stepsCard()}
@@ -158,11 +162,15 @@ function renderHome(root) {
     if (snap) return quickSnap(snap.dataset.act === "snap-photo" ? "photo" : "voice", d, () => renderHome(root));
     if (e.target.closest("[data-act=health-manual]")) return openManual(() => renderHome(root));
     if (e.target.closest("[data-act=health-guide]")) return openGuide();
-    if (e.target.closest("[data-act=cup]")) {
+    const cup = e.target.closest("[data-act=water]");
+    if (cup) {
       const l = (A.food[d] ||= { date: d, meals: {}, water: 0 });
-      l.water = (l.water || 0) + 1;
+      const i = +cup.dataset.i;
+      l.water = (l.water || 0) === i + 1 ? i : i + 1;
       saveLater("food", d, () => A.food[d], 400);
-      toast(`Đã uống ${l.water} cốc nước.`, "good");
+      if (navigator.vibrate) navigator.vibrate(10);
+      const goal = waterGoalCups(d);
+      if (l.water === goal) toast("Tuyệt vời! Bạn đã uống đủ nước hôm nay.", "good");
       renderHome(root);
     }
   };
