@@ -14,7 +14,7 @@ window.APP_CONFIG = {
   },
 
   // Model Gemini, thử lần lượt từ trái sang phải.
-  geminiModels: ["gemini-3.5-flash", "gemini-3.5-flash-lite"],
+  geminiModels: ["gemini-3.5-flash-lite", "gemini-3.6-flash", "gemini-3.5-flash"],
 
   // Chỉ cho các email này đăng nhập. Để trống [] = ai có tài khoản Google cũng vào được
   // (dữ liệu vẫn riêng từng người). VD: ["ban@gmail.com", "banbe@gmail.com"]

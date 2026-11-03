@@ -4,7 +4,8 @@ import { getAI, getGenerativeModel, GoogleAIBackend } from "firebase/ai";
 import { DEMO, firebaseApp } from "./store.js";
 
 const cfg = window.APP_CONFIG || {};
-const MODELS = cfg.geminiModels?.length ? cfg.geminiModels : ["gemini-3.5-flash", "gemini-3.5-flash-lite"];
+// Each model has its own free quota: when one is busy or out of quota we try the next.
+const MODELS = cfg.geminiModels?.length ? cfg.geminiModels : ["gemini-3.5-flash-lite", "gemini-3.6-flash", "gemini-3.5-flash"];
 let ai = null;
 let working = null; // first model that answered
 
@@ -17,14 +18,17 @@ function getAi() {
 
 export function friendlyError(e) {
   const m = String(e?.message || e);
-  if (/429|quota|exhaust|rate/i.test(m)) return "Gemini đang hết lượt miễn phí trong phút này. Đợi khoảng 1 phút rồi hỏi lại nhé.";
+  console.error("Gemini error:", e);
+  if (/\b429\b|RESOURCE_EXHAUSTED|quota/i.test(m)) return "Tất cả model Gemini miễn phí đang hết lượt trong phút này. Đợi khoảng 1 phút rồi hỏi lại nhé.";
+  if (/\b50[03]\b|overloaded|high demand|UNAVAILABLE/i.test(m)) return "Máy chủ Gemini đang quá tải. Thử lại sau ít giây nhé.";
   if (/api-not-enabled|not been used|disabled/i.test(m) || e?.code === "api-not-enabled") return "Chưa bật Firebase AI Logic trong Firebase Console (xem HUONG-DAN.md, bước 5).";
   if (/fetch|network|Failed to fetch/i.test(m)) return "Mất kết nối mạng. Kiểm tra mạng rồi thử lại.";
   if (/safety|blocked/i.test(m)) return "Câu hỏi bị bộ lọc an toàn của Gemini chặn. Thử hỏi cách khác.";
   return "Gemini đang lỗi: " + m.slice(0, 160);
 }
 
-const isModelMissing = (e) => /404|not found|is not supported|unknown model|invalid model/i.test(String(e?.message || e));
+// Errors worth retrying on another model: missing model, out of quota, overloaded.
+const tryNext = (e) => /\b(404|429|500|503)\b|not found|is not supported|unknown model|invalid model|RESOURCE_EXHAUSTED|quota|overloaded|high demand|UNAVAILABLE/i.test(String(e?.message || e));
 
 async function withModel(fn, params) {
   if (DEMO) throw new Error("demo");
@@ -38,7 +42,8 @@ async function withModel(fn, params) {
       return r;
     } catch (e) {
       last = e;
-      if (!isModelMissing(e)) throw e;
+      console.warn(`Gemini ${name} lỗi, thử model khác:`, e?.message);
+      if (!tryNext(e)) throw e;
     }
   }
   throw last;

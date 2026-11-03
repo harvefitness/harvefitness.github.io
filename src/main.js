@@ -48,23 +48,31 @@ function shell() {
   };
 }
 
+const TICKER = ["Sức mạnh", "Thể lực", "Dẻo dai", "Dinh dưỡng", "Phục hồi", "Kỷ luật"].map((t) => `<span>${t}</span>`).join("");
+
 // ---------------------------------------------------------------- Login
 function renderLogin(reason) {
   app.innerHTML = `<div class="login">
+    <div class="login-top"><span class="brand"><span class="logo">DNT<i>&amp;</i>HARVE</span><small>FITNESS</small></span></div>
     <div class="login-hero">
-      <span class="logo xl">DNT<i>&amp;</i>HARVE</span><span class="tag">FITNESS</span>
-      <h1>Huấn luyện viên cá nhân trong điện thoại của bạn</h1>
-      <ul class="feat">
-        <li>Đánh giá cơ thể theo chuẩn quốc tế: BMI châu Á, % mỡ U.S. Navy, WHO, ISSN</li>
-        <li>Lộ trình tập riêng, tính cả tennis, chạy bộ, bơi…</li>
-        <li>Thư viện 870+ bài tập có ảnh động</li>
-        <li>Thực đơn món Việt mỗi ngày, nhật ký ăn có PT chấm điểm</li>
-        <li>Hỏi PT AI (Gemini) bất cứ lúc nào</li>
-      </ul>
+      <span class="eyebrow">PT cá nhân online</span>
+      <h1>Tập chăm.<br>Ăn đúng.<br>Hồi phục.<br><em>Lặp lại.</em></h1>
+      <p>Đánh giá cơ thể theo chuẩn quốc tế, lộ trình tập và thực đơn riêng cho bạn, có PT AI kèm mỗi ngày.</p>
+      <div class="login-stats">
+        <div><b>870+</b><small>Bài tập</small></div>
+        <div><b>12 tuần</b><small>Lộ trình</small></div>
+        <div><b>24/7</b><small>PT AI</small></div>
+      </div>
     </div>
     ${reason === "not_allowed" ? `<p class="err">Tài khoản Google này chưa được mời. Nhờ chủ website thêm email của bạn.</p>` : ""}
     <button class="google" id="signin"><svg viewBox="0 0 48 48" aria-hidden="true"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-8l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.3-.1-2.4-.4-3.5z"/></svg>${S.DEMO ? "Vào chế độ thử" : "Đăng nhập bằng Google"}</button>
-    <p class="muted sm center">Dữ liệu của mỗi người được lưu riêng, chỉ chính bạn xem được.<br>Nội dung mang tính tham khảo, không thay thế tư vấn của bác sĩ.</p>
+    <div class="ticker" aria-hidden="true"><div>${TICKER}${TICKER}</div></div>
+    <div class="lanes">
+      <div class="lane"><span class="ic"><svg viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg></span><h3>Đánh giá chuẩn quốc tế</h3><p>BMI châu Á, % mỡ U.S. Navy, eo/mông WHO, năng lượng Mifflin–St Jeor, đạm theo ISSN.</p></div>
+      <div class="lane lime"><span class="ic"><svg viewBox="0 0 24 24"><path d="M6 8v8M18 8v8M3 10v4M21 10v4M6 12h12"/></svg></span><h3>Lộ trình riêng 12 tuần</h3><p>Theo lịch của bạn, tính cả tennis, chạy bộ, bơi. Thư viện 870+ bài có ảnh động.</p></div>
+      <div class="lane"><span class="ic"><svg viewBox="0 0 24 24"><path d="M7 3v8a2 2 0 0 0 2 2v8M11 3v8M7 7h4M17 3c-2 2-2 6 0 8v10"/></svg></span><h3>Thực đơn & PT AI</h3><p>Thực đơn món Việt mỗi ngày, nhật ký ăn có chấm điểm, hỏi PT AI bất cứ lúc nào.</p></div>
+    </div>
+    <p class="muted sm">Dữ liệu mỗi người lưu riêng, chỉ chính bạn xem được. Nội dung mang tính tham khảo, không thay thế tư vấn của bác sĩ.</p>
   </div>`;
   $("#signin").onclick = async () => {
     try {
@@ -97,8 +105,9 @@ function renderHome(root) {
   const hi = hour < 11 ? "Chào buổi sáng" : hour < 14 ? "Chào buổi trưa" : hour < 18 ? "Chào buổi chiều" : "Chào buổi tối";
   root.innerHTML = `<section class="greet">
       <span class="eyebrow">${niceDate(d)} · Tuần ${ph.week}/12 · ${esc(ph.name)}</span>
-      <h1>${hi}, ${esc(p.name || "bạn")}</h1>
+      <h1>${hi},<br><em>${esc((p.name || "bạn").trim().split(/\s+/).pop())}.</em></h1>
     </section>
+    <div class="ticker" aria-hidden="true"><div>${TICKER}${TICKER}</div></div>
     <section class="card today-card">
       <span class="eyebrow">Hôm nay</span>
       ${items
@@ -120,7 +129,7 @@ function renderHome(root) {
         <div class="row gap"><a class="ghost sm" href="#food-log">Ghi món ăn</a><button class="ghost sm" data-act="cup">+1 cốc nước</button></div>
       </div>
     </section>
-    ${next ? `<section class="card"><div class="row between"><span class="eyebrow">Bữa tiếp theo · ${next.time}</span><a class="link" href="#food-plan">Cả ngày ›</a></div>
+    ${next ? `<section class="card"><div class="row between"><span class="eyebrow">Bữa tiếp theo · ${next.time}</span><a class="link" href="#food-plan">Cả ngày</a></div>
       <h3>${esc(next.label)}</h3><p class="muted">${next.items.filter((it) => it.id !== "creatine").map((it) => esc(foodName(it))).join(" · ")}</p></section>` : ""}
     <section class="card"><span class="eyebrow">Tuần này</span>
       <div class="week mini">${WEEK_ORDER.map((dw, i) => {
@@ -131,7 +140,7 @@ function renderHome(root) {
     <section class="card stats">
       <a href="#body"><small>Cân nặng</small><b class="num">${fmt(lastW ? +lastW[1].weight : +p.weight, 1)}</b><span class="num ${lastW && firstW && lastW[1].weight - firstW[1].weight < 0 ? "good-t" : ""}">${lastW && firstW && lastW[0] !== firstW[0] ? (lastW[1].weight - firstW[1].weight > 0 ? "+" : "") + fmt(lastW[1].weight - firstW[1].weight, 1) + " kg" : "kg"}</span></a>
       <a href="#body"><small>% mỡ</small><b class="num">${fmt(A.as.bf, 1)}</b><span>${esc(A.as.metrics.find((m) => m.key === "bf").cls)}</span></a>
-      <a href="#body"><small>Mục tiêu</small><b>${esc(GOALS[A.t.goal].vn)}</b><span class="num">${fmt(A.t.kcal)} kcal</span></a>
+      <a href="#body"><small>Mục tiêu</small><b class="txt">${esc(GOALS[A.t.goal].vn)}</b><span class="num">${fmt(A.t.kcal)} kcal</span></a>
     </section>
     <section class="quick"><span class="eyebrow">Hỏi nhanh PT</span>
       <div class="chips wrap">${["Hôm nay mình nên ăn gì trước buổi tập?", "Đau mỏi cơ sau tập thì làm gì?", "Làm sao để giảm mỡ bụng nhanh hơn?", "Mình có nên uống creatine không?"].map((q) => `<a class="chip" href="#chat" data-ask="${esc(q)}">${esc(q)}</a>`).join("")}</div>

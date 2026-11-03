@@ -39,7 +39,7 @@ function renderAssess(root) {
     </ul>
     <p class="muted sm">Căn cứ: ISSN (đạm 1,6–2,2 g/kg), tối đa giảm 1% cân nặng mỗi tuần, chất béo ≥ 25% năng lượng, chất xơ 14g/1.000 kcal (USDA).</p>
   </section>
-  <h3 class="sec">Chỉ số chi tiết</h3>
+  <h2 class="sec">Chỉ số <em>chi tiết.</em></h2>
   <div class="metrics">${a.metrics
     .map(
       (m) => `<details class="metric ${m.status}">

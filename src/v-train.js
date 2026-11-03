@@ -148,11 +148,11 @@ function renderPlan(root) {
   const mon = mondayOf(today());
   let h = `<section class="card">
     <span class="eyebrow">Chu kỳ ${ph.cycle} · bắt đầu ${shortDate(A.profile.programStart)}</span>
-    <h2>Lộ trình 12 tuần</h2>
+    <h2>Lộ trình <em>12 tuần.</em></h2>
     <div class="phases">${PHASES.map((x, i) => `<div class="phase ${i === ph.idx ? "on" : i < ph.idx ? "past" : ""}" style="flex:${x.w[1] - x.w[0] + 1}"><b>${x.short}</b><small>T${x.w[0]}${x.w[1] !== x.w[0] ? "–" + x.w[1] : ""}</small></div>`).join("")}</div>
     <p class="phase-note"><b>Tuần ${ph.week}: ${esc(ph.name)}.</b> ${esc(ph.vn)}</p>
   </section>
-  <h3 class="sec">Lịch tuần này</h3>
+  <h2 class="sec">Lịch <em>tuần này.</em></h2>
   <div class="week">${WEEK_ORDER.map((d, i) => {
     const date = addDays(mon, i);
     const items = planFor(p, date);
@@ -162,7 +162,19 @@ function renderPlan(root) {
       <span class="ds">${items.map((it) => (it.kind === "gym" ? "Gym" : it.kind === "sport" ? esc(it.name) : "Nghỉ")).join(" + ")}</span></button>`;
   }).join("")}</div>
   <div class="legend"><span><i class="lg done"></i>Xong</span><span><i class="lg partial"></i>Dở</span><span><i class="lg missed"></i>Bỏ lỡ</span><span><i class="lg planned"></i>Sắp tới</span></div>
-  <h3 class="sec">Các buổi tập</h3>`;
+  <h2 class="sec">Một tuần <em>của bạn.</em></h2>
+  <div class="sched">${WEEK_ORDER.map((d, i) => {
+    const date = addDays(mon, i);
+    return planFor(p, date)
+      .map((it) => {
+        const s = it.kind === "gym" ? p.sessions[it.key] : null;
+        const focus = s ? [...new Set(s.exercises.slice(0, 3).map((e) => e.slotVn.toLowerCase()))].join(" + ") : it.kind === "sport" ? "Thể thao" : "Đi bộ nhẹ, giãn cơ";
+        const min = it.kind === "gym" ? (+A.profile.gymMinutes || 60) : it.kind === "sport" ? it.minutes : 0;
+        return `<a class="sched-row ${date === today() ? "today" : ""}" href="#train-today" data-date="${date}"><span class="d">${DOW[d]}</span><span class="s">${esc(it.name)}<small>${esc(focus)}</small></span><span class="m">${min ? min + " phút" : "Nghỉ"}</span></a>`;
+      })
+      .join("");
+  }).join("")}</div>
+  <h2 class="sec">Các <em>buổi tập.</em></h2>`;
   for (const k of p.keys) {
     const s = p.sessions[k];
     const days = p.week.filter((w) => w.items.some((i) => i.key === k)).map((w) => DOW_LONG[w.d]);
@@ -295,7 +307,7 @@ export async function renderTrain(root, sub) {
       libLimit = 40;
       return drawLib(root);
     }
-    const day = e.target.closest(".wday");
+    const day = e.target.closest(".wday, .sched-row");
     if (day) {
       curDate = day.dataset.date;
       location.hash = "#train-today";
