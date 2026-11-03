@@ -4,7 +4,7 @@ Tổng thời gian khoảng 20–30 phút, **hoàn toàn miễn phí**. Bạn ch
 
 | Dịch vụ | Dùng để | Chi phí |
 | --- | --- | --- |
-| GitHub Pages | Chứa website, cho link `https://<tên-github>.github.io/dnt-harve-fitness/` | Miễn phí |
+| GitHub Pages | Chứa website, cho link `https://ngletam123.github.io/dnt-harve-fitness-provip/` | Miễn phí |
 | Firebase Authentication | Đăng nhập bằng Google | Miễn phí |
 | Cloud Firestore | Lưu dữ liệu riêng từng người | Miễn phí đến 50.000 lượt đọc/ngày |
 | Firebase AI Logic (Gemini) | Chat PT AI, ước tính calo, nhận xét bữa ăn | Miễn phí (có giới hạn số câu hỏi mỗi phút/ngày) |
@@ -34,7 +34,7 @@ Tổng thời gian khoảng 20–30 phút, **hoàn toàn miễn phí**. Bạn ch
 
 1. Menu trái chọn **Build → Authentication**, rồi bấm **Get started**.
 2. Tab **Sign-in method** → chọn **Google** → bật **Enable** → chọn email hỗ trợ (Gmail của bạn) → **Save**.
-3. Tab **Settings → Authorized domains** → **Add domain** → nhập `<tên-github>.github.io` (ví dụ `harvelabel.github.io`) → **Add**.
+3. Tab **Settings → Authorized domains** → **Add domain** → nhập `ngletam123.github.io` → **Add**.
 
 ## Bước 4: Tạo cơ sở dữ liệu
 
@@ -67,7 +67,7 @@ Quy tắc này nghĩa là mỗi người chỉ đọc và ghi được dữ li�
 Sau khi Claude đẩy code lên (hoặc bạn sửa `public/config.js` trên GitHub), đợi 1–2 phút để GitHub tự build. Kiểm tra ở tab **Actions** trong kho (dấu ✓ xanh là xong). Rồi mở:
 
 ```
-https://<tên-github>.github.io/dnt-harve-fitness/
+https://ngletam123.github.io/dnt-harve-fitness-provip/
 ```
 
 **Thêm vào màn hình chính như app:**
