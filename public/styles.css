@@ -500,3 +500,5 @@ body:has(.login) { padding-bottom: 0; }
 .guide li::marker { color: var(--accent); font-family: var(--f-display); }
 .guide b { color: var(--ink); }
 code { font-family: ui-monospace, Menlo, monospace; font-size: 12.5px; background: var(--sunk); border: 1px solid var(--line); border-radius: 6px; padding: 1px 6px; overflow-wrap: anywhere; color: var(--accent); }
+.way { display: grid; gap: 12px; }
+.desc-box { background: var(--sunk); border: 1px dashed var(--accent); border-radius: 14px; padding: 12px 14px; font-size: 13.5px; line-height: 1.55; user-select: all; -webkit-user-select: all; overflow-wrap: anywhere; }

@@ -98,28 +98,60 @@ export function openManual(after) {
 
 export function openGuide() {
   const url = `${siteUrl()}#health-`;
-  openSheet(`<h2>Kết nối <em>Apple Health.</em></h2>
-    <p class="muted">Làm 1 lần, khoảng 3 phút. Phím tắt đọc số bước và quãng đường hôm nay trong app Sức khỏe, rồi mở website kèm số liệu. Không cần cài thêm app.</p>
-    <ol class="guide">
-      <li>Mở app <b>Phím tắt (Shortcuts)</b> → bấm <b>+</b> ở góc phải → đặt tên phím tắt là <b class="hl">${SHORTCUT_NAME}</b> (đúng chữ hoa, có dấu cách).</li>
-      <li><b>Thêm tác vụ</b> → tìm <b>"Tìm mẫu sức khỏe"</b> (Find Health Samples) → bấm vào chữ <b>Loại</b> chọn <b>Số bước (Steps)</b> → thêm bộ lọc <b>Ngày bắt đầu · là hôm nay</b> (Start Date · is today).</li>
-      <li>Thêm tác vụ <b>"Tính toán thống kê"</b> (Calculate Statistics) → chọn <b>Tổng (Sum)</b>.</li>
-      <li>Thêm tác vụ <b>"Làm tròn số"</b> (Round Number).</li>
-      <li>Thêm tác vụ <b>"URL"</b>, gõ: <code class="copy">${esc(url)}</code> rồi chèn biến <b>Số đã làm tròn</b> (Rounded Number) vào ngay sau dấu gạch cuối.</li>
-      <li>Thêm tác vụ <b>"Mở URL"</b> (Open URLs).</li>
-      <li>Bấm ▶ chạy thử. Lần đầu iPhone hỏi quyền đọc Sức khỏe, chọn <b>Cho phép</b>. Website sẽ mở và báo "Đã nhận … bước".</li>
-    </ol>
-    <div class="note">Muốn có cả số km: lặp lại bước 2–3 với loại <b>Quãng đường đi bộ + chạy</b> (Walking + Running Distance), rồi ở bước 5 thêm dấu <b>-</b> và biến số km phía sau. Ví dụ: <code>…#health-8234-5,6</code></div>
-    <div class="note">Tự động mỗi tối: app Phím tắt → tab <b>Tự động hóa</b> → <b>+</b> → <b>Thời gian trong ngày</b> (vd 21:00) → chọn <b>Chạy ngay</b> → chọn phím tắt <b>${SHORTCUT_NAME}</b>.</div>
-    <button class="primary block" id="copy-url">Sao chép link cho bước 5</button>`);
-  document.getElementById("copy-url").onclick = async (e) => {
-    try {
-      await navigator.clipboard.writeText(url);
-      e.target.textContent = "Đã sao chép";
-    } catch {
-      toast(url);
+  const desc = `Lấy tổng số bước chân hôm nay trong app Sức khỏe và làm tròn thành số nguyên. Lấy tổng quãng đường đi bộ và chạy hôm nay trong app Sức khỏe, tính bằng km, làm tròn 1 chữ số thập phân. Sau đó mở URL: ${url}[số bước]-[số km]`;
+  const body = openSheet(`<h2>Kết nối <em>Apple Health.</em></h2>
+    <p class="muted">Làm 1 lần trên <b>iPhone</b> (không phải Mac, vì số bước nằm trong app Sức khỏe của iPhone). Phím tắt đọc số bước và quãng đường hôm nay, rồi mở website kèm số liệu. Không cần cài thêm app. Chọn 1 trong 2 cách.</p>
+    <div class="seg full"><button class="seg-b" data-way="1" aria-pressed="false">Cách 1 · Từng bước</button><button class="seg-b" data-way="2" aria-pressed="true">Cách 2 · Gõ mô tả</button></div>
+
+    <section class="way" data-way-body="1" hidden>
+      <h3>Cách 1: <em>Tạo từng tác vụ</em></h3>
+      <p class="muted sm">Dùng khi app Phím tắt có màn hình "Thêm tác vụ" (iOS cũ hơn, hoặc bấm <b>Sửa</b> ở iOS mới).</p>
+      <ol class="guide">
+        <li>Mở app <b>Phím tắt (Shortcuts)</b> → bấm <b>+</b> ở góc phải → đặt tên phím tắt là <b class="hl">${SHORTCUT_NAME}</b> (đúng chữ hoa, có dấu cách).</li>
+        <li><b>Thêm tác vụ</b> → tìm <b>"Tìm mẫu sức khỏe"</b> (Find Health Samples) → bấm vào chữ <b>Loại</b> chọn <b>Số bước (Steps)</b> → thêm bộ lọc <b>Ngày bắt đầu · là hôm nay</b> (Start Date · is today).</li>
+        <li>Thêm tác vụ <b>"Tính toán thống kê"</b> (Calculate Statistics) → chọn <b>Tổng (Sum)</b>.</li>
+        <li>Thêm tác vụ <b>"Làm tròn số"</b> (Round Number).</li>
+        <li>Thêm tác vụ <b>"URL"</b>, gõ: <code>${esc(url)}</code> rồi chèn biến <b>Số đã làm tròn</b> (Rounded Number) vào ngay sau dấu gạch cuối.</li>
+        <li>Thêm tác vụ <b>"Mở URL"</b> (Open URLs).</li>
+        <li>Bấm ▶ chạy thử. Lần đầu iPhone hỏi quyền đọc Sức khỏe, chọn <b>Cho phép</b>. Website sẽ mở và báo "Đã nhận … bước".</li>
+      </ol>
+      <div class="note">Muốn có cả số km: lặp lại bước 2–3 với loại <b>Quãng đường đi bộ + chạy</b> (Walking + Running Distance), rồi ở bước 5 thêm dấu <b>-</b> và biến số km phía sau. Ví dụ: <code>…#health-8234-5,6</code></div>
+      <button class="primary block" data-copy="url">Sao chép link cho bước 5</button>
+    </section>
+
+    <section class="way" data-way-body="2">
+      <h3>Cách 2: <em>Gõ mô tả (iOS mới)</em></h3>
+      <p class="muted sm">Dùng khi bấm <b>+</b> trong app Phím tắt hiện câu hỏi <b>"Bạn muốn phím tắt thực hiện tác vụ gì?"</b> và ô <b>Mô tả phím tắt</b>.</p>
+      <ol class="guide">
+        <li>Mở app <b>Phím tắt</b> trên iPhone → bấm <b>+</b>.</li>
+        <li>Bấm vào ô <b>"Mô tả phím tắt"</b>, dán đoạn mô tả bên dưới (bấm nút <b>Sao chép mô tả</b>) → bấm <b>↵</b>.</li>
+        <li>Đặt tên: bấm vào tên <b>"Phím tắt mới ˅"</b> ở trên cùng → <b>Đổi tên</b> → gõ đúng <b class="hl">${SHORTCUT_NAME}</b>.</li>
+        <li>Bấm chạy thử. Lần đầu iPhone hỏi quyền đọc Sức khỏe: <b>Cho phép</b> cả <b>Số bước</b> và <b>Quãng đường đi bộ + chạy</b>.</li>
+        <li>Safari mở website và báo <b>"Đã nhận … bước · … km từ Apple Health"</b> là xong.</li>
+      </ol>
+      <div class="desc-box">${esc(desc)}</div>
+      <button class="primary block" data-copy="desc">Sao chép mô tả</button>
+      <div class="note">Nếu chạy thử không ra: bấm <b>Sửa</b> (góc trên bên phải) để xem các bước iPhone đã tạo, kiểm tra tác vụ <b>Mở URL</b> có dạng <code>…#health-</code> rồi đến số bước, dấu <b>-</b>, số km. Hoặc dùng Cách 1.</div>
+    </section>
+
+    <div class="note">Tự động mỗi tối: app Phím tắt → tab <b>Tự động hóa</b> → <b>+</b> → <b>Thời gian trong ngày</b> (vd 21:00) → chọn <b>Chạy ngay</b> → chọn phím tắt <b>${SHORTCUT_NAME}</b>.</div>`);
+  body.addEventListener("click", async (e) => {
+    const w = e.target.closest("[data-way]");
+    if (w) {
+      body.querySelectorAll("[data-way]").forEach((b) => b.setAttribute("aria-pressed", b === w));
+      body.querySelectorAll("[data-way-body]").forEach((s) => (s.hidden = s.dataset.wayBody !== w.dataset.way));
+      return;
     }
-  };
+    const c = e.target.closest("[data-copy]");
+    if (!c) return;
+    const text = c.dataset.copy === "url" ? url : desc;
+    try {
+      await navigator.clipboard.writeText(text);
+      c.textContent = "Đã sao chép ✓";
+    } catch {
+      toast("Không sao chép được, hãy bấm giữ vào đoạn chữ để chọn và sao chép.", "bad");
+    }
+  });
 }
 
 export function stepsContext() {

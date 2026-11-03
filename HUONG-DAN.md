@@ -108,4 +108,8 @@ allowedEmails: ["ban@gmail.com", "banthan@gmail.com"],
 
 Website không đọc trực tiếp được app Sức khỏe (Apple chỉ cho app cài từ App Store đọc). Cách làm: tạo một **Phím tắt** tên `DNT Health`. Phím tắt đọc số bước và quãng đường hôm nay, rồi mở `https://ngletam123.github.io/DNT-HARVE-FITNESS-PROVIP/#health-<số bước>-<km>`. Website nhận số liệu và lưu vào tài khoản.
 
-Hướng dẫn từng bước có ngay trong web: **Trang chủ → thẻ "Bước chân hôm nay" → Cách kết nối**. Sau khi tạo phím tắt, nút **Cập nhật từ Apple Health** sẽ tự chạy phím tắt đó.
+Hướng dẫn có ngay trong web: **Trang chủ → thẻ "Bước chân hôm nay" → Cách kết nối**, gồm 2 cách:
+- **Cách 1, từng bước:** tự thêm các tác vụ Tìm mẫu sức khỏe → Tính toán thống kê → Làm tròn số → URL → Mở URL.
+- **Cách 2, gõ mô tả (iOS mới):** bấm **+** trong app Phím tắt, dán đoạn mô tả có sẵn trong web vào ô "Mô tả phím tắt", rồi đổi tên thành `DNT Health`.
+
+Phải làm trên **iPhone**, không làm trên Mac được vì số bước nằm trong app Sức khỏe của iPhone. Sau khi tạo phím tắt, nút **Cập nhật từ Apple Health** sẽ tự chạy phím tắt đó.
