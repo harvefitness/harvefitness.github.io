@@ -1,150 +1,88 @@
-// Interactive 3D muscle model (three.js). Drag to rotate 360°, pinch/scroll to zoom,
-// tap a muscle to select it. Built from smooth primitives so it stays light (no model download).
+// Interactive 3D anatomical muscle model (three.js).
+// Model: Z-Anatomy (based on BodyParts3D, © The Database Center for Life Science), CC BY-SA 4.0,
+// via Svitylo 3D Anatomy Atlas data 1.2.0; superficial muscles grouped and compressed for this site.
+// Drag to rotate 360°, pinch/scroll to zoom, tap a muscle group to select it.
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
+import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
+import { MeshoptDecoder } from "three/examples/jsm/libs/meshopt_decoder.module.js";
 
-const C = { skin: 0x26272a, muscle: 0x6a6c72, hover: 0x9a9da4, on: 0xd4ff3a };
+const C = { rest: 0x8d8f94, muscle: 0xb9bbc0, hover: 0xd9dbe0, on: 0xe2572f };
+export const MODEL_CREDIT = "Mô hình 3D: Z-Anatomy (dựa trên BodyParts3D, © DBCLS), CC BY-SA 4.0";
 
-/**
- * Muscle parts: [key, shape, position(x,y,z), scale(x,y,z), rotationZ?]
- * Units ≈ metres, y up, z towards the viewer. Mirrored parts use ±x.
- */
-const SYM = (key, shape, x, y, z, sx, sy, sz, rz = 0, rx = 0) => [
-  [key, shape, [x, y, z], [sx, sy, sz], rz, rx],
-  [key, shape, [-x, y, z], [sx, sy, sz], -rz, rx],
-];
-const PARTS = [
-  // Neck & traps
-  ["neck", "sphere", [0, 1.5, 0.0], [0.06, 0.075, 0.055]],
-  ["trapezius", "sphere", [0, 1.43, -0.045], [0.16, 0.06, 0.055]],
-  ["trapezius", "sphere", [0, 1.31, -0.085], [0.075, 0.14, 0.035]],
-  // Chest
-  ...SYM("chest", "sphere", 0.075, 1.3, 0.075, 0.1, 0.075, 0.05, 0.12),
-  // Shoulders
-  ...SYM("front-deltoids", "sphere", 0.205, 1.365, 0.03, 0.06, 0.07, 0.055),
-  ...SYM("back-deltoids", "sphere", 0.205, 1.36, -0.035, 0.058, 0.066, 0.05),
-  // Abs (six-pack) & obliques
-  ...[1.17, 1.085, 1.0].flatMap((y) => SYM("abs", "sphere", 0.036, y, 0.098, 0.034, 0.04, 0.026)),
-  ["abs", "sphere", [0, 0.925, 0.085], [0.07, 0.05, 0.035]],
-  ...SYM("obliques", "sphere", 0.12, 1.07, 0.045, 0.045, 0.13, 0.07, -0.08),
-  // Back
-  ...SYM("upper-back", "sphere", 0.105, 1.2, -0.075, 0.085, 0.17, 0.05, -0.18),
-  ["upper-back", "sphere", [0, 1.28, -0.095], [0.05, 0.08, 0.025]],
-  ...SYM("lower-back", "sphere", 0.035, 1.02, -0.09, 0.035, 0.1, 0.035),
-  // Hips & glutes
-  ...SYM("gluteal", "sphere", 0.078, 0.875, -0.075, 0.085, 0.09, 0.075),
-  ...SYM("abductors", "sphere", 0.158, 0.9, -0.005, 0.04, 0.075, 0.06),
-  // Thighs
-  ...SYM("quadriceps", "sphere", 0.098, 0.64, 0.035, 0.072, 0.2, 0.07, 0.04),
-  ...SYM("hamstring", "sphere", 0.098, 0.645, -0.04, 0.066, 0.19, 0.062, 0.04),
-  ...SYM("adductor", "sphere", 0.05, 0.71, 0.0, 0.04, 0.15, 0.05, -0.05),
-  ...SYM("knees", "sphere", 0.105, 0.445, 0.02, 0.052, 0.055, 0.05),
-  // Lower legs
-  ...SYM("calves", "sphere", 0.105, 0.3, -0.03, 0.053, 0.13, 0.058),
-  // Arms are built separately (rotated outwards from the shoulder)
-];
-const ARM = [
-  ["biceps", "sphere", [0, -0.14, 0.03], [0.045, 0.11, 0.045]],
-  ["triceps", "sphere", [0, -0.13, -0.03], [0.05, 0.125, 0.048]],
-  ["forearm", "sphere", [0, -0.41, 0.0], [0.043, 0.13, 0.043]],
-];
-// Non-selectable body (the "skin" underneath the muscles)
-const BASE = [
-  ["sphere", [0, 1.625, 0.005], [0.095, 0.115, 0.1]], // head
-  ["capsule", [0, 1.14, -0.005], [0.15, 0.2, 0.1]], // torso
-  ["sphere", [0, 0.92, -0.005], [0.155, 0.1, 0.105]], // pelvis
-  ["capsule", [0.1, 0.62, 0], [0.068, 0.17, 0.068]],
-  ["capsule", [-0.1, 0.62, 0], [0.068, 0.17, 0.068]], // thighs
-  ["capsule", [0.105, 0.26, 0], [0.042, 0.16, 0.045]],
-  ["capsule", [-0.105, 0.26, 0], [0.042, 0.16, 0.045]], // shins
-  ["box", [0.105, 0.03, 0.04], [0.055, 0.035, 0.13]],
-  ["box", [-0.105, 0.03, 0.04], [0.055, 0.035, 0.13]], // feet
-];
-
-export function mountBody3D(container, { onSelect } = {}) {
+export async function mountBody3D(container, { onSelect } = {}) {
   const w = container.clientWidth || 320, h = container.clientHeight || 480;
   const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
   renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 2));
   renderer.setSize(w, h);
   renderer.outputColorSpace = THREE.SRGBColorSpace;
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 1.05;
   container.appendChild(renderer.domElement);
 
   const scene = new THREE.Scene();
-  const camera = new THREE.PerspectiveCamera(32, w / h, 0.05, 20);
-  camera.position.set(0.9, 1.15, 3.1);
+  const camera = new THREE.PerspectiveCamera(30, w / h, 0.05, 20);
 
-  scene.add(new THREE.HemisphereLight(0xffffff, 0x202020, 1.3));
-  const key = new THREE.DirectionalLight(0xffffff, 2.2);
-  key.position.set(2, 3, 3);
+  // Studio lighting: soft key, cool fill, back light for muscle contours.
+  scene.add(new THREE.HemisphereLight(0xffffff, 0x1a1d24, 1.1));
+  const key = new THREE.DirectionalLight(0xffffff, 2.4);
+  key.position.set(1.5, 2.5, 2.5);
   scene.add(key);
-  const rim = new THREE.DirectionalLight(0xd4ff3a, 0.35);
-  rim.position.set(-2.5, 2, -3);
-  scene.add(rim);
-  const back = new THREE.DirectionalLight(0xffffff, 1.2);
-  back.position.set(-1.5, 2.5, -3);
-  scene.add(back);
+  const fill = new THREE.DirectionalLight(0xc8d4ff, 0.8);
+  fill.position.set(-2, 1.2, 1.5);
+  scene.add(fill);
+  const backL = new THREE.DirectionalLight(0xffffff, 1.6);
+  backL.position.set(-1, 2.2, -2.5);
+  scene.add(backL);
 
-  const body = new THREE.Group();
-  scene.add(body);
-
-  const geo = {
-    sphere: new THREE.SphereGeometry(1, 32, 24),
-    box: new THREE.BoxGeometry(2, 2, 2, 2, 2, 2),
-    capsule: new THREE.CapsuleGeometry(1, 1.2, 8, 24),
-  };
-  const skinMat = new THREE.MeshStandardMaterial({ color: C.skin, roughness: 0.75, metalness: 0.05 });
+  const loader = new GLTFLoader();
+  loader.setMeshoptDecoder(MeshoptDecoder);
+  const gltf = await loader.loadAsync(new URL("models/muscles.glb", document.baseURI).href);
+  const model = gltf.scene;
   const muscles = [];
-  const mkMuscle = (k) => new THREE.MeshStandardMaterial({ color: C.muscle, roughness: 0.45, metalness: 0.1, emissive: 0x000000 });
-
-  const add = (parent, keyName, shape, pos, scale, rz = 0, rx = 0) => {
-    const m = new THREE.Mesh(geo[shape], keyName ? mkMuscle(keyName) : skinMat);
-    m.position.set(...pos);
-    m.scale.set(...scale);
-    m.rotation.z = rz;
-    m.rotation.x = rx;
-    if (shape === "box") m.geometry = new THREE.BoxGeometry(2, 2, 2);
-    if (keyName) {
-      m.userData.key = keyName;
-      muscles.push(m);
+  model.traverse((o) => {
+    if (!o.isMesh) return;
+    const k = o.name;
+    o.material = new THREE.MeshStandardMaterial({
+      color: k === "rest" ? C.rest : C.muscle,
+      roughness: 0.55,
+      metalness: 0.05,
+      emissive: 0x000000,
+    });
+    if (k !== "rest") {
+      o.userData.key = k;
+      muscles.push(o);
     }
-    parent.add(m);
-    return m;
-  };
-  BASE.forEach(([s, p, sc]) => add(body, null, s, p, sc));
-  PARTS.forEach(([k, s, p, sc, rz, rx]) => add(body, k, s, p, sc, rz, rx));
-  // Arms hang from the shoulders, angled slightly outwards.
-  for (const side of [1, -1]) {
-    const arm = new THREE.Group();
-    arm.position.set(0.215 * side, 1.34, 0);
-    arm.rotation.z = 0.13 * side;
-    body.add(arm);
-    add(arm, null, "capsule", [0, -0.14, 0], [0.042, 0.12, 0.042]); // upper arm
-    add(arm, null, "capsule", [0, -0.41, 0], [0.035, 0.12, 0.035]); // forearm
-    add(arm, null, "sphere", [0, -0.6, 0.005], [0.035, 0.055, 0.022]); // hand
-    ARM.forEach(([k, s, p, sc]) => add(arm, k, s, p, sc));
-  }
-  // Rounded boxes look softer: give abs a slight bevel feel via scale.
-  // Floor shadow disc
-  const disc = new THREE.Mesh(new THREE.CircleGeometry(0.42, 48), new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.45 }));
+  });
+  // Center the figure on the floor and face the camera.
+  const box = new THREE.Box3().setFromObject(model);
+  const center = box.getCenter(new THREE.Vector3());
+  model.position.x -= center.x;
+  model.position.z -= center.z;
+  model.position.y -= box.min.y;
+  scene.add(model);
+  const height = box.max.y - box.min.y;
+  const target = new THREE.Vector3(0, height * 0.52, 0);
+  const dist = height * 2.05;
+  camera.position.set(0, height * 0.58, dist);
+
+  // Floor disc
+  const disc = new THREE.Mesh(new THREE.CircleGeometry(0.38, 48), new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.35 }));
   disc.rotation.x = -Math.PI / 2;
   disc.position.y = 0.002;
   scene.add(disc);
-  const ring = new THREE.Mesh(new THREE.RingGeometry(0.44, 0.452, 64), new THREE.MeshBasicMaterial({ color: C.on, transparent: true, opacity: 0.6 }));
-  ring.rotation.x = -Math.PI / 2;
-  ring.position.y = 0.003;
-  scene.add(ring);
 
   const controls = new OrbitControls(camera, renderer.domElement);
-  controls.target.set(0, 0.95, 0);
+  controls.target.copy(target);
   controls.enablePan = false;
   controls.enableDamping = true;
   controls.dampingFactor = 0.08;
-  controls.minDistance = 1.6;
-  controls.maxDistance = 4.2;
-  controls.minPolarAngle = Math.PI * 0.18;
+  controls.minDistance = height * 0.7;
+  controls.maxDistance = height * 2.6;
+  controls.minPolarAngle = Math.PI * 0.2;
   controls.maxPolarAngle = Math.PI * 0.62;
   controls.autoRotate = true;
-  controls.autoRotateSpeed = 1.6;
+  controls.autoRotateSpeed = 1.4;
   controls.addEventListener("start", () => (controls.autoRotate = false));
   controls.update();
 
@@ -157,18 +95,24 @@ export function mountBody3D(container, { onSelect } = {}) {
       const on = m.userData.key === selected;
       const hv = !on && m.userData.key === hovered;
       m.material.color.setHex(on ? C.on : hv ? C.hover : C.muscle);
-      m.material.emissive.setHex(on ? 0x2a3300 : 0x000000);
+      m.material.emissive.setHex(on ? 0x3a0e00 : 0x000000);
     }
   };
   const pick = (e) => {
     const r = renderer.domElement.getBoundingClientRect();
     ptr.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
     ray.setFromCamera(ptr, camera);
-    return ray.intersectObjects(muscles, false)[0]?.object.userData.key || null;
+    // First muscle group under the finger; a thin background muscle lying just on top
+    // (within 2.5 cm) does not block the group below it.
+    const hits = ray.intersectObject(model, true);
+    if (!hits.length) return null;
+    const first = hits[0].distance;
+    const hit = hits.find((h) => h.object.userData.key && h.distance - first < 0.025);
+    return hit?.object.userData.key || null;
   };
   const el = renderer.domElement;
   el.style.touchAction = "none";
-  el.addEventListener("pointerdown", (e) => (down = { x: e.clientX, y: e.clientY, t: Date.now() }));
+  el.addEventListener("pointerdown", (e) => (down = { x: e.clientX, y: e.clientY }));
   el.addEventListener("pointerup", (e) => {
     if (!down) return;
     const moved = Math.hypot(e.clientX - down.x, e.clientY - down.y);
@@ -190,7 +134,7 @@ export function mountBody3D(container, { onSelect } = {}) {
     }
   });
 
-  // ---- render loop (paused when off-screen) ----
+  // ---- render loop ----
   let raf = 0, alive = true;
   const loop = () => {
     if (!alive) return;
@@ -208,27 +152,24 @@ export function mountBody3D(container, { onSelect } = {}) {
   });
   ro.observe(container);
 
+  const lookFrom = (ang) => {
+    controls.autoRotate = false;
+    const d = camera.position.distanceTo(controls.target);
+    camera.position.set(Math.sin(ang) * d, target.y + height * 0.06, Math.cos(ang) * d);
+    controls.update();
+  };
   return {
     select(k, { face = true } = {}) {
       selected = k;
       paint();
       if (!face) return;
-      // Turn the model so the selected muscle faces the viewer.
       const m = muscles.find((x) => x.userData.key === k);
       if (!m) return;
-      const back = m.getWorldPosition(new THREE.Vector3()).z < 0;
-      controls.autoRotate = false;
-      const dist = camera.position.distanceTo(controls.target);
-      const ang = back ? Math.PI : 0;
-      camera.position.set(Math.sin(ang) * dist * 0.95 + 0.3, 1.15, Math.cos(ang) * dist * 0.95);
-      controls.update();
+      const c = new THREE.Box3().setFromObject(m).getCenter(new THREE.Vector3());
+      lookFrom(c.z < -0.01 ? Math.PI : 0);
     },
     view(side) {
-      controls.autoRotate = false;
-      const dist = camera.position.distanceTo(controls.target);
-      const ang = side === "back" ? Math.PI : side === "left" ? -Math.PI / 2 : side === "right" ? Math.PI / 2 : 0;
-      camera.position.set(Math.sin(ang) * dist, 1.15, Math.cos(ang) * dist);
-      controls.update();
+      lookFrom({ front: 0, right: Math.PI / 2, back: Math.PI, left: -Math.PI / 2 }[side] ?? 0);
     },
     spin(on) {
       controls.autoRotate = on;
@@ -238,6 +179,12 @@ export function mountBody3D(container, { onSelect } = {}) {
       cancelAnimationFrame(raf);
       ro.disconnect();
       controls.dispose();
+      model.traverse((o) => {
+        if (o.isMesh) {
+          o.geometry.dispose();
+          o.material.dispose();
+        }
+      });
       renderer.dispose();
       el.remove();
     },

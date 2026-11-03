@@ -102,7 +102,7 @@ function renderProgress(root) {
   let h = `<form class="card" id="mform">
     <div class="row between"><span class="eyebrow">Ghi số đo</span><input type="date" id="m-date" value="${d0}" max="${today()}" aria-label="Ngày đo"></div>
     <div class="grid3">
-      ${[["weight", "Cân nặng (kg)"], ["waist", "Eo (cm)"], ["hip", "Mông (cm)"], ["neck", "Cổ (cm)"], ["thigh", "Đùi (cm)"], ["arm", "Bắp tay (cm)"]]
+      ${[["weight", "Cân nặng (kg)"], ["waist", "Eo (cm)"], ["hip", "Mông (cm)"], ["chest", "Ngực (cm)"], ["thigh", "Đùi (cm)"], ["arm", "Bắp tay (cm)"]]
         .map(([k, l]) => `<label class="fld"><span>${l}</span><input id="m-${k}" inputmode="decimal" value="${esc(cur[k] ?? "")}" placeholder="${esc(p[k] ?? "")}"></label>`)
         .join("")}
     </div>
@@ -114,7 +114,7 @@ function renderProgress(root) {
   else {
     h += chart("Cân nặng (kg)", [{ name: "Cân nặng", color: "var(--accent)", area: true, pts: ser("weight") }], "kg");
     h += chart("% mỡ ước tính", [{ name: "% mỡ", color: "var(--chrome)", area: true, pts: bfSer }], "%");
-    h += chart("Số đo (cm)", [{ name: "Eo", color: "var(--accent)", pts: ser("waist") }, { name: "Mông", color: "var(--chrome)", pts: ser("hip") }, { name: "Đùi", color: "var(--muted)", pts: ser("thigh") }].filter((s) => s.pts.length), "cm");
+    h += chart("Số đo (cm)", [{ name: "Eo", color: "var(--accent)", pts: ser("waist") }, { name: "Mông", color: "var(--chrome)", pts: ser("hip") }, { name: "Ngực", color: "var(--warn)", pts: ser("chest") }, { name: "Đùi", color: "var(--muted)", pts: ser("thigh") }].filter((s) => s.pts.length), "cm");
   }
   if (rows.length)
     h += `<div class="tbl-wrap"><table><thead><tr><th>Ngày</th><th>Kg</th><th>Eo</th><th>Mông</th><th>% mỡ</th><th></th></tr></thead><tbody>${rows
@@ -144,7 +144,7 @@ export function renderBody(root, sub) {
     e.preventDefault();
     const d = $("#m-date", root).value || today();
     const rec = { ...(A.body[d] || {}), date: d };
-    for (const k of ["weight", "waist", "hip", "neck", "thigh", "arm", "bodyFat"]) {
+    for (const k of ["weight", "waist", "hip", "chest", "thigh", "arm", "bodyFat"]) {
       const v = num($("#m-" + k, root).value);
       if (v != null) rec[k] = v;
       else delete rec[k];

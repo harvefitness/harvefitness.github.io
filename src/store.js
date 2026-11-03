@@ -2,7 +2,8 @@
 // or, when public/config.js has no Firebase keys yet, a local demo mode.
 import { initializeApp } from "firebase/app";
 import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, signOut as fbSignOut, onAuthStateChanged } from "firebase/auth";
-import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, doc, getDoc, setDoc, deleteDoc, collection, getDocs } from "firebase/firestore";
+// Firestore Lite: plain reads/writes over REST, a fraction of the full SDK's size.
+import { getFirestore, doc, getDoc, setDoc, deleteDoc, collection, getDocs } from "firebase/firestore/lite";
 
 const cfg = window.APP_CONFIG || {};
 export const DEMO = !cfg.firebase?.apiKey;
@@ -35,11 +36,7 @@ export function initStore(onUser) {
   app = initializeApp(cfg.firebase);
   auth = getAuth(app);
   auth.languageCode = "vi";
-  try {
-    db = initializeFirestore(app, { localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }) });
-  } catch {
-    db = initializeFirestore(app, {});
-  }
+  db = getFirestore(app);
   onAuthStateChanged(auth, (u) => {
     const allow = cfg.allowedEmails || [];
     if (u && allow.length && !allow.map((e) => e.toLowerCase()).includes((u.email || "").toLowerCase())) {

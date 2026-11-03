@@ -1,7 +1,10 @@
 // Gemini through Firebase AI Logic (Gemini Developer API, free Spark plan).
 // The API key stays inside Firebase; nothing secret ships in the website.
-import { getAI, getGenerativeModel, GoogleAIBackend } from "firebase/ai";
 import { DEMO, firebaseApp } from "./store.js";
+
+// The Firebase AI SDK is loaded only when the person first uses an AI feature (keeps start-up light).
+let sdk = null;
+const loadSdk = () => (sdk ||= import("firebase/ai"));
 
 const cfg = window.APP_CONFIG || {};
 // Each model has its own free quota: when one is busy or out of quota we try the next.
@@ -11,7 +14,8 @@ let working = null; // first model that answered
 
 export const AI_READY = !DEMO;
 
-function getAi() {
+async function getAi() {
+  const { getAI, GoogleAIBackend } = await loadSdk();
   if (!ai) ai = getAI(firebaseApp(), { backend: new GoogleAIBackend() });
   return ai;
 }
@@ -36,7 +40,8 @@ async function withModel(fn, params) {
   let last;
   for (const name of list) {
     try {
-      const model = getGenerativeModel(getAi(), { model: name, ...params });
+      const { getGenerativeModel } = await loadSdk();
+      const model = getGenerativeModel(await getAi(), { model: name, ...params });
       const r = await fn(model);
       working = name;
       return r;

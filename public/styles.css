@@ -6,7 +6,7 @@
   --chrome: #c9cbc4; --chrome-soft: #2a2b2d;
   --good: #7ee08a; --good-soft: #1b2e1f; --warn: #ffb547; --warn-soft: #33270f; --bad: #ff6464; --bad-soft: #351616;
   --shadow: 0 10px 30px -18px rgba(0, 0, 0, .8);
-  --f-display: "Anton", "Oswald", Impact, "Arial Narrow Bold", sans-serif;
+  --f-display: "Anton", Impact, "Arial Narrow Bold", sans-serif;
   --f-body: "Be Vietnam Pro", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --r: 22px;
   --nav-h: 66px;
@@ -578,3 +578,5 @@ code { font-family: ui-monospace, Menlo, monospace; font-size: 12.5px; backgroun
 .cal-d[aria-current="date"] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); opacity: 1; }
 .cal-d[aria-current="date"] small { color: color-mix(in srgb, var(--accent-ink) 70%, transparent); }
 .eat-r .ghost { justify-self: start; }
+.credit3d { font-size: 10.5px; color: var(--muted); text-align: center; margin-top: -4px; }
+.stage3d { background: radial-gradient(60% 55% at 50% 42%, #23324a 0%, transparent 72%); }

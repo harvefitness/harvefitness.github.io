@@ -34,6 +34,7 @@ export function renderMuscles(root) {
   const use3d = webglOK();
   const views = [["front", "Trước"], ["right", "Phải"], ["back", "Sau"], ["left", "Trái"]];
   const stage3d = `<div class="stage3d" id="stage3d"><div class="loading3d">Đang tải mô hình 3D…</div></div>
+    <p class="credit3d" id="credit3d"></p>
     <div class="view-btns">${views.map(([k, v]) => `<button class="chip" data-view="${k}">${v}</button>`).join("")}<button class="chip" data-view="spin" aria-pressed="true">Tự xoay</button></div>`;
   const stage2d = `<div class="stage" id="stage"><div class="flipper ${side === "back" ? "back" : ""}" id="flipper">
       <div class="face front">${svgSide("front")}<span class="face-tag">Mặt trước</span></div>
@@ -62,11 +63,15 @@ export function renderMuscles(root) {
 
   if (use3d) {
     import("./body3d.js")
-      .then(({ mountBody3D }) => {
+      .then(async ({ mountBody3D, MODEL_CREDIT }) => {
         const st = $("#stage3d", root);
         if (!st || !st.isConnected) return;
-        st.innerHTML = "";
-        viewer = mountBody3D(st, { onSelect: (k) => choose(k, true) });
+        const v = await mountBody3D(st, { onSelect: (k) => choose(k, true) });
+        if (!st.isConnected) return v.dispose();
+        st.querySelector(".loading3d")?.remove();
+        viewer = v;
+        const cr = $("#credit3d", root);
+        if (cr) cr.textContent = MODEL_CREDIT;
         if (selected) viewer.select(selected, { face: false });
       })
       .catch((e) => {

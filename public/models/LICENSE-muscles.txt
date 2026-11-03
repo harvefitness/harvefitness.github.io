@@ -1,0 +1,16 @@
+muscles.glb — 3D muscle model used on the "Nhóm cơ" page of DNT & HARVE FITNESS.
+
+Source: "Z-Anatomy — The libre 3D atlas of anatomy" (https://www.z-anatomy.com,
+https://github.com/Z-Anatomy/Models-of-human-anatomy), based on "BodyParts3D,
+© The Database Center for Life Science" (DBCLS), as released in Svitylo 3D Anatomy Atlas
+data 1.2.0 (npm @authorod/svitylo-3d-anatomy-data, https://github.com/authorOd/3d-anatomy-atlas).
+
+License: Creative Commons Attribution-ShareAlike 4.0 International (CC BY-SA 4.0)
+https://creativecommons.org/licenses/by-sa/4.0/
+
+Changes made for this website (tools/build-muscles.mjs): only the superficial skeletal muscles
+of the "economy" quality level kept; bursae, fasciae, tendon sheaths, ligaments and deep / visceral
+muscles removed; muscles merged into 18 fitness muscle groups plus one background mesh; the
+external abdominal oblique aponeurosis in front of the rectus abdominis removed; the external abdominal oblique and the background mesh simplified to ~12,000 triangles with
+meshoptimizer; recompressed with EXT_meshopt_compression. This adapted model is distributed under
+the same CC BY-SA 4.0 license.

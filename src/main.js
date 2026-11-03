@@ -132,7 +132,7 @@ function renderHome(root) {
       </div>
       <div class="water-home">
         <div class="cups">${Array.from({ length: Math.max(waterGoalCups(d), log?.water || 0) }, (_, i) => `<button class="cup" data-act="water" data-i="${i}" aria-pressed="${i < (log?.water || 0)}" aria-label="Cốc nước ${i + 1}"></button>`).join("")}</div>
-        <p class="hint">Chạm vào 1 ly mỗi khi bạn uống xong 1 cốc nước (250ml). Chạm lại để bỏ.</p>
+        <p class="hint">Chạm vào 1 ly mỗi khi bạn uống xong 1 cốc nước (250ml).</p>
       </div>
     </section>
     ${stepsCard()}
@@ -309,6 +309,10 @@ addEventListener("hashchange", route);
 // ---------------------------------------------------------------- Boot
 app.innerHTML = `<div class="splash"><span class="logo xl">DNT<i>&amp;</i>HARVE</span><span class="tag">FITNESS</span></div>`;
 stashIncoming(); // a reading from the Apple Health shortcut may arrive before sign-in
+// Cache the app on the phone so repeat visits open almost instantly.
+if ("serviceWorker" in navigator && location.protocol === "https:") {
+  addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));
+}
 S.initStore(async (user, reason) => {
   A.user = user;
   if (!user) return renderLogin(reason);
