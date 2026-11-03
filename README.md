@@ -2,6 +2,8 @@
 
 Website PT cá nhân online, tối ưu cho điện thoại.
 
+![Giao diện trên điện thoại](docs/preview.png)
+
 - Đăng nhập Google, dữ liệu mỗi người lưu riêng (Firebase Auth + Firestore)
 - Đánh giá cơ thể theo chuẩn quốc tế (BMI châu Á, % mỡ U.S. Navy, WHR/WHtR, FFMI, Mifflin–St Jeor, MET)
 - Lộ trình tập 12 tuần riêng từng người, tính cả môn thể thao khác (tennis, chạy bộ, bơi…)
