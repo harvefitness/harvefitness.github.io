@@ -467,3 +467,24 @@ body:has(.login) { padding-bottom: 0; }
   .stats b { font-size: 24px; }
 }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition: none !important; animation: none !important; } }
+
+/* ---------- Photo / voice food capture ---------- */
+.quick-snap { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.quick-snap .primary svg, .snap-btn svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+.quick-snap .primary:last-child { background: var(--raised); color: var(--ink); }
+.snap { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.snap-btn { border: 1px solid var(--line); background: var(--raised); border-radius: 20px; padding: 16px 12px; display: grid; justify-items: center; gap: 4px; text-align: center; color: var(--ink); }
+.snap-btn svg { width: 30px; height: 30px; color: var(--accent); margin-bottom: 4px; }
+.snap-btn b { font-family: var(--f-display); font-weight: 400; font-size: 17px; text-transform: uppercase; }
+.snap-btn small { font-size: 11.5px; color: var(--muted); }
+.snap-btn:disabled { opacity: .45; }
+.snap-btn.rec { background: var(--bad); border-color: var(--bad); color: #fff; animation: recpulse 1.2s infinite; }
+.snap-btn.rec svg, .snap-btn.rec small { color: #fff; }
+@keyframes recpulse { 50% { box-shadow: 0 0 0 8px color-mix(in srgb, var(--bad) 30%, transparent); } }
+.snap-photo { position: relative; border-radius: 18px; overflow: hidden; max-height: 260px; }
+.snap-photo img { width: 100%; max-height: 260px; object-fit: cover; display: block; }
+.snap-photo .x { position: absolute; top: 8px; right: 8px; background: rgba(0, 0, 0, .65); color: #fff; }
+.ai-wait { display: flex; align-items: center; gap: 12px; justify-content: center; padding: 14px; border-radius: 999px; background: var(--accent); color: var(--accent-ink); font-weight: 800; font-size: 12.5px; letter-spacing: .08em; text-transform: uppercase; }
+.ai-wait i { width: 18px; height: 18px; border-radius: 50%; border: 3px solid currentColor; border-right-color: transparent; animation: spin .8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.stepper button[data-d^="-"] { background: var(--raised); color: var(--ink); border-color: var(--line); }

@@ -3,6 +3,7 @@ import { A, saveLater, loadDay, isTrainingDay, waterGoalCups, aiContext } from "
 import { FOODS, foodById, totals, itemView, mealPlan, analyzeDay, grade, MEAL_SLOTS } from "./food.js";
 import { planFor } from "./program.js";
 import * as AI from "./ai.js";
+import { compressImage, canRecord, startRecording, micErrorText } from "./snap.js";
 import { esc, num, fmt, fold, today, addDays, niceDate, hm, $, $$, openSheet, closeSheet, toast, md, bar, clamp } from "./ui.js";
 
 let planDate = today();
@@ -81,6 +82,10 @@ function renderLog(root) {
     <div class="datenav"><button class="icon-btn" data-act="lprev" aria-label="Ngày trước">‹</button><b>${date === today() ? "Hôm nay · " : ""}${niceDate(date)}</b><button class="icon-btn" data-act="lnext" aria-label="Ngày sau">›</button></div>
     <span class="pill ${training ? "accent" : ""}">${training ? "Ngày tập" : "Ngày nghỉ"}</span>
   </div>
+  ${AI.AI_READY ? `<div class="quick-snap">
+    <button class="primary" data-act="snap-photo"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>Chụp món</button>
+    <button class="primary" data-act="snap-voice"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>Nói món</button>
+  </div>` : ""}
   <section class="card analysis">
     <div class="score-row">
       <div class="score ${g.k}"><b class="num">${an.score ?? "–"}</b><small>/100</small></div>
@@ -112,11 +117,34 @@ function renderLog(root) {
 }
 
 // ---------------------------------------------------------------- Add-food sheet
-function openAdd(slot, onDone) {
-  let mode = "list", q = "", qty = {}, aiItems = null;
+const NUTRI_SYS = "Bạn là chuyên gia dinh dưỡng thể thao Việt Nam. Dùng Bảng thành phần thực phẩm Việt Nam (Viện Dinh dưỡng) và USDA. Ước lượng thực tế, không làm tròn quá thô. Chỉ trả về JSON hợp lệ.";
+const NUTRI_FMT = `Trả về JSON đúng dạng:
+{"transcript":"(chỉ khi có ghi âm) câu người dùng nói","items":[{"n":"tên món tiếng Việt","portion":"khẩu phần ước lượng, vd 1 đĩa ~350g","kcal":số,"p":gam đạm,"c":gam tinh bột,"f":gam chất béo,"tags":"r nếu chiên/xào nhiều dầu/nhiều mỡ; u nếu đồ ngọt/nước có đường; a nếu rượu bia; v nếu là rau"}],"note":"1–2 câu nhận xét kiểu PT về bữa này, tiếng Việt"}
+Mỗi món/đồ uống một dòng. Không nhận ra đồ ăn thì "items": [].`;
+
+function openAdd(slot, onDone, { start } = {}) {
+  let mode = AI.AI_READY ? "ai" : "list", q = "", qty = {};
+  let aiItems = null, aiNote = "", photo = null, text = "", rec = null, busy = false;
   const body = openSheet(`<h2>Thêm vào ${MEAL_SLOTS[slot].toLowerCase()}</h2>
-    <div class="seg full">${[["list", "Món có sẵn"], ["ai", "Mô tả bằng lời (AI)"], ["manual", "Tự nhập"]].map(([k, v]) => `<button class="seg-b" data-m="${k}">${v}</button>`).join("")}</div>
-    <div id="add-body"></div>`, { wide: true });
+    <div class="seg full">${[["ai", "Chụp · Nói"], ["list", "Có sẵn"], ["manual", "Tự nhập"]].map(([k, v]) => `<button class="seg-b" data-m="${k}">${v}</button>`).join("")}</div>
+    <input type="file" id="snap-file" accept="image/*" hidden>
+    <div id="add-body"></div>`, { wide: true, onClose: () => rec?.cancel() });
+  const fileInput = $("#snap-file", body);
+
+  const resultHtml = () => {
+    if (!aiItems) return "";
+    if (!aiItems.length) return `<div class="empty">${esc(aiNote || "AI không nhận ra món ăn.")} Thử chụp gần hơn, đủ sáng, hoặc gõ thêm mô tả.</div>`;
+    const tot = aiItems.reduce((t, x) => ({ kcal: t.kcal + x.kcal * x.qty, p: t.p + x.p * x.qty, c: t.c + x.c * x.qty, f: t.f + x.f * x.qty }), { kcal: 0, p: 0, c: 0, f: 0 });
+    return `<div class="macros">
+        <div><b>${fmt(tot.kcal)}</b><small>kcal</small></div><div><b>${fmt(tot.p)}g</b><small>Đạm</small></div>
+        <div><b>${fmt(tot.c)}g</b><small>Tinh bột</small></div><div><b>${fmt(tot.f)}g</b><small>Béo</small></div></div>
+      ${aiNote ? `<p class="note">${esc(aiNote)}</p>` : ""}
+      <ul class="pick ai">${aiItems.map((x, i) => `<li><div><b>${esc(x.n)}</b><small class="muted num">${esc(x.portion || "")} · ${fmt(x.kcal * x.qty)} kcal · đạm ${fmt(x.p * x.qty)}g · tinh bột ${fmt(x.c * x.qty)}g · béo ${fmt(x.f * x.qty)}g</small></div>
+        <div class="stepper"><button data-aq="${i}" data-d="-0.5" aria-label="Bớt">−</button><span class="num">${String(x.qty).replace(".", ",")}</span><button data-aq="${i}" data-d="0.5" aria-label="Thêm">+</button></div></li>`).join("")}</ul>
+      <p class="muted sm">Ăn nửa phần thì bấm − để còn 0,5. Bấm − về 0 để bỏ món. AI ước tính có thể lệch khoảng ±15%.</p>
+      <button class="primary block sticky" data-act="add-ai" ${aiItems.some((x) => x.qty > 0) ? "" : "disabled"}>Thêm ${aiItems.filter((x) => x.qty > 0).length} món vào nhật ký</button>`;
+  };
+
   const draw = () => {
     $$(".seg-b", body).forEach((b) => b.setAttribute("aria-pressed", b.dataset.m === mode));
     const ab = $("#add-body", body);
@@ -137,11 +165,24 @@ function openAdd(slot, onDone) {
         n.setSelectionRange(pos, pos);
       };
     } else if (mode === "ai") {
-      ab.innerHTML = AI.AI_READY
-        ? `<label class="fld"><span>Bạn đã ăn gì? Ghi càng rõ càng tốt.</span><textarea id="ai-text" rows="3" placeholder="VD: 1 đĩa cơm tấm sườn bì chả, 1 ly trà đá, nửa quả xoài"></textarea></label>
-          <button class="primary block" data-act="ai-est">Ước tính calo & dinh dưỡng</button>
-          <div id="ai-res">${aiItems ? aiList(aiItems) : ""}</div>`
-        : `<p class="muted">Tính năng AI cần kết nối Firebase (xem HUONG-DAN.md).</p>`;
+      if (!AI.AI_READY) {
+        ab.innerHTML = `<p class="muted">Tính năng AI cần kết nối Firebase.</p>`;
+        return;
+      }
+      ab.innerHTML = `<div class="snap">
+          <button class="snap-btn" data-act="photo" ${busy ? "disabled" : ""}><svg viewBox="0 0 24 24"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg><b>Chụp ảnh món</b><small>hoặc chọn ảnh có sẵn</small></button>
+          <button class="snap-btn ${rec ? "rec" : ""}" data-act="voice" ${busy && !rec ? "disabled" : ""}><svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg><b id="rec-label">${rec ? "Đang nghe… bấm để xong" : "Nói món ăn"}</b><small id="rec-time">${rec ? "0 giây" : "VD: “trưa ăn 1 tô phở bò”"}</small></button>
+        </div>
+        ${photo ? `<div class="snap-photo"><img src="${photo.url}" alt="Ảnh món ăn"><button class="x" data-act="photo-del" aria-label="Bỏ ảnh">✕</button></div>` : ""}
+        <label class="fld"><span>${photo ? "Ghi chú thêm (không bắt buộc)" : "Hoặc gõ món đã ăn"}</span><textarea id="ai-text" rows="2" placeholder="${photo ? "VD: ăn hết nửa đĩa, cơm ít, không ăn da gà" : "VD: 1 đĩa cơm tấm sườn bì chả, 1 ly trà đá"}">${esc(text)}</textarea></label>
+        ${busy ? `<div class="ai-wait"><i></i><span>${busy}</span></div>` : `<button class="primary block" data-act="ai-est" ${photo || text.trim() ? "" : "disabled"}>Phân tích calo & dinh dưỡng</button>`}
+        <div id="ai-res">${resultHtml()}</div>`;
+      const ta = $("#ai-text", ab);
+      ta.oninput = () => {
+        text = ta.value;
+        const btn = $("[data-act=ai-est]", ab);
+        if (btn) btn.disabled = !(photo || text.trim());
+      };
     } else {
       ab.innerHTML = `<form id="man" class="grid2">
         <label class="fld full"><span>Tên món</span><input id="m-n" required placeholder="VD: Bánh tráng trộn"></label>
@@ -159,8 +200,77 @@ function openAdd(slot, onDone) {
       };
     }
   };
-  const aiList = (items) => `<ul class="pick ai">${items.map((x, i) => `<li><div><b>${esc(x.n)}</b><small class="muted num">${esc(x.portion || "")} · ${Math.round(x.kcal)} kcal · ${Math.round(x.p)}g đạm · ${Math.round(x.c)}g tinh bột · ${Math.round(x.f)}g béo</small></div><button class="x" data-ai-del="${i}" aria-label="Bỏ">✕</button></li>`).join("")}</ul>
-    <button class="primary block" data-act="add-ai">Thêm ${items.length} món</button><p class="muted sm">AI ước tính theo khẩu phần phổ biến. Sai lệch ±15%.</p>`;
+
+  // ---- AI analysis (photo and/or text and/or audio) ----
+  const analyze = async (audio) => {
+    busy = audio ? "AI đang nghe và tính calo…" : photo ? "AI đang xem ảnh và tính calo…" : "AI đang tính calo…";
+    aiItems = null;
+    draw();
+    const parts = [];
+    if (photo) parts.push(`Ảnh dưới đây là bữa ăn của người dùng (món Việt Nam là chính). Nhận diện từng món/đồ uống, ước lượng khẩu phần dựa trên kích thước đĩa, bát, đũa, muỗng trong ảnh.`, { inlineData: { mimeType: photo.mimeType, data: photo.base64 } });
+    if (audio) parts.push(`Đoạn ghi âm dưới đây là người dùng nói bằng tiếng Việt họ đã ăn/uống gì. Chép lại câu nói vào "transcript" rồi ước tính từng món (khẩu phần phổ biến ở Việt Nam nếu không nói rõ).`, { inlineData: { mimeType: audio.mimeType, data: audio.base64 } });
+    if (text.trim()) parts.push(`${photo || audio ? "Ghi chú thêm của người dùng" : "Người dùng mô tả bữa ăn"}: "${text.trim()}"`);
+    parts.push(NUTRI_FMT);
+    try {
+      const res = await AI.askJSON(parts, NUTRI_SYS);
+      aiItems = (res.items || []).filter((x) => x && x.n).map((x) => ({ n: String(x.n), portion: String(x.portion || ""), kcal: +x.kcal || 0, p: +x.p || 0, c: +x.c || 0, f: +x.f || 0, tags: String(x.tags || ""), qty: 1 }));
+      aiNote = String(res.note || "");
+      if (audio && res.transcript && !text.trim()) text = String(res.transcript);
+    } catch (err) {
+      toast(AI.friendlyError(err), "bad");
+    }
+    busy = false;
+    draw();
+    $("#ai-res", body)?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
+  fileInput.onchange = async () => {
+    const f = fileInput.files?.[0];
+    fileInput.value = "";
+    if (!f) return;
+    try {
+      photo = await compressImage(f);
+      analyze();
+    } catch (err) {
+      toast(err.message, "bad");
+    }
+  };
+
+  const toggleVoice = async () => {
+    if (rec) {
+      const r = rec;
+      rec = null;
+      try {
+        const audio = await r.stop();
+        if (audio.seconds < 1) {
+          toast("Ghi âm quá ngắn, bấm giữ lâu hơn rồi nói nhé.", "bad");
+          return draw();
+        }
+        analyze(audio);
+      } catch (err) {
+        toast(micErrorText(err), "bad");
+        draw();
+      }
+      return;
+    }
+    if (!canRecord()) return toast("Trình duyệt này chưa hỗ trợ ghi âm. Hãy gõ món ăn vào ô bên dưới.", "bad");
+    try {
+      rec = await startRecording({
+        onTick: (s) => {
+          const t = $("#rec-time", body);
+          if (t) t.textContent = `${s} giây · tối đa 45 giây`;
+          if (s >= 45 && rec) toggleVoice();
+        },
+      });
+      if (navigator.vibrate) navigator.vibrate(20);
+      draw();
+    } catch (err) {
+      rec = null;
+      toast(micErrorText(err), "bad");
+      draw();
+    }
+  };
+
   body.addEventListener("click", async (e) => {
     const m = e.target.closest("[data-m]");
     if (m) {
@@ -172,43 +282,36 @@ function openAdd(slot, onDone) {
       qty[st.dataset.q] = clamp((qty[st.dataset.q] || 0) + +st.dataset.d, 0, 10);
       return draw();
     }
-    const del = e.target.closest("[data-ai-del]");
-    if (del) {
-      aiItems.splice(+del.dataset.aiDel, 1);
-      return draw();
+    const aq = e.target.closest("[data-aq]");
+    if (aq) {
+      const it = aiItems[+aq.dataset.aq];
+      it.qty = clamp(it.qty + +aq.dataset.d, 0, 10);
+      $("#ai-res", body).innerHTML = resultHtml();
+      return;
     }
     const b = e.target.closest("[data-act]");
     if (!b) return;
-    if (b.dataset.act === "add-list") {
+    const act = b.dataset.act;
+    if (act === "photo") fileInput.click();
+    if (act === "photo-del") {
+      photo = null;
+      return draw();
+    }
+    if (act === "voice") toggleVoice();
+    if (act === "ai-est") analyze();
+    if (act === "add-list") {
       onDone(Object.entries(qty).filter(([, v]) => v > 0).map(([id, v]) => ({ id, qty: v })));
       closeSheet();
     }
-    if (b.dataset.act === "add-ai") {
-      onDone(aiItems.map((x) => ({ ...x, qty: 1, ai: true })));
+    if (act === "add-ai") {
+      onDone(aiItems.filter((x) => x.qty > 0).map((x) => ({ ...x, ai: true })));
       closeSheet();
-    }
-    if (b.dataset.act === "ai-est") {
-      const text = $("#ai-text", body).value.trim();
-      if (!text) return toast("Mô tả món bạn đã ăn.", "bad");
-      b.disabled = true;
-      b.textContent = "Đang ước tính…";
-      try {
-        const res = await AI.askJSON(
-          `Ước tính dinh dưỡng cho bữa ăn sau (món Việt Nam, khẩu phần phổ biến ở Việt Nam nếu không ghi rõ): "${text}".
-Trả về JSON dạng {"items":[{"n":"tên món tiếng Việt","portion":"khẩu phần","kcal":số,"p":gam đạm,"c":gam tinh bột,"f":gam béo,"tags":"chuỗi ký tự: r nếu chiên/nhiều mỡ, u nếu đồ ngọt/nước có đường, a nếu rượu bia, v nếu là rau"}]}. Mỗi món một dòng.`,
-          "Bạn là chuyên gia dinh dưỡng Việt Nam. Dùng Bảng thành phần thực phẩm Việt Nam và USDA. Chỉ trả về JSON."
-        );
-        aiItems = (res.items || res || []).filter((x) => x && x.n).map((x) => ({ n: String(x.n), portion: String(x.portion || ""), kcal: +x.kcal || 0, p: +x.p || 0, c: +x.c || 0, f: +x.f || 0, tags: String(x.tags || "") }));
-        if (!aiItems.length) throw new Error("Không nhận ra món ăn");
-        draw();
-      } catch (err) {
-        b.disabled = false;
-        b.textContent = "Thử lại";
-        toast(AI.friendlyError(err), "bad");
-      }
     }
   });
   draw();
+  // Opened from the quick "photo" / "voice" buttons: start right away (same tap gesture).
+  if (start === "photo" && mode === "ai") fileInput.click();
+  if (start === "voice" && mode === "ai") toggleVoice();
 }
 
 // ---------------------------------------------------------------- Router entry
@@ -270,6 +373,20 @@ export async function renderFood(root, sub) {
       delete log.aiReview;
       save(logDate);
       return redraw();
+    }
+    if (a === "snap-photo" || a === "snap-voice") {
+      const now = new Date();
+      const slot = logDate === today() ? slotForTime(`${now.getHours()}:${now.getMinutes()}`) : "phu";
+      const d = logDate;
+      openAdd(slot, (items) => {
+        const log = getLog(d);
+        (log.meals[slot] ||= []).push(...items);
+        delete log.aiReview;
+        save(d);
+        toast(`Đã thêm ${items.length} món vào ${MEAL_SLOTS[slot].toLowerCase()}.`, "good");
+        redraw();
+      }, { start: a === "snap-photo" ? "photo" : "voice" });
+      return;
     }
     if (a === "add") {
       const slot = b.dataset.slot;

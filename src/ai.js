@@ -78,7 +78,7 @@ export async function ask(prompt, system) {
   });
 }
 
-/** One-shot JSON answer (parsed). */
+/** One-shot JSON answer (parsed). `prompt` may be a string or an array of parts (text / inlineData). */
 export async function askJSON(prompt, system) {
   const text = await withModel(async (model) => (await model.generateContent(prompt)).response.text(), {
     systemInstruction: system,
