@@ -39,21 +39,21 @@ function stepHtml() {
   switch (step) {
     case 0:
       return `<h2>Bạn là ai?</h2>
-      ${field("name", "Tên gọi", 'autocomplete="nickname" placeholder="VD: Tâm"')}
+      ${field("name", "Tên gọi", 'autocomplete="nickname" placeholder="Tên của bạn"')}
       <div class="fld"><span>Giới tính sinh học</span>${chips("sex", { female: "Nữ", male: "Nam" })}<small>Dùng cho công thức tính trao đổi chất và % mỡ.</small></div>
       <div class="grid3">
-        ${field("age", "Tuổi", 'inputmode="numeric" placeholder="24"')}
-        ${field("height", "Cao (cm)", 'inputmode="decimal" placeholder="170"')}
-        ${field("weight", "Nặng (kg)", 'inputmode="decimal" placeholder="68"')}
+        ${field("age", "Tuổi", 'inputmode="numeric"')}
+        ${field("height", "Cao (cm)", 'inputmode="decimal"')}
+        ${field("weight", "Nặng (kg)", 'inputmode="decimal"')}
       </div>`;
     case 1:
       return `<h2>Số đo cơ thể</h2>
       <p class="muted">Đo bằng thước dây mềm, buổi sáng trước khi ăn. Càng đủ số đo, kết quả % mỡ càng chính xác (công thức U.S. Navy).</p>
       <div class="grid2">
-        ${field("neck", "Vòng cổ (cm)", 'inputmode="decimal" placeholder="32"', "Ngay dưới yết hầu")}
-        ${field("waist", "Vòng eo (cm)", 'inputmode="decimal" placeholder="70"', "Ngang rốn, thở ra nhẹ")}
-        ${field("hip", "Vòng mông (cm)", 'inputmode="decimal" placeholder="92"', "Chỗ nở nhất")}
-        ${field("wrist", "Cổ tay (cm)", 'inputmode="decimal" placeholder="15"', "Ngay trên xương cổ tay")}
+        ${field("neck", "Vòng cổ (cm)", 'inputmode="decimal"', "Ngay dưới yết hầu")}
+        ${field("waist", "Vòng eo (cm)", 'inputmode="decimal"', "Ngang rốn, thở ra nhẹ")}
+        ${field("hip", "Vòng mông (cm)", 'inputmode="decimal"', "Chỗ nở nhất")}
+        ${field("wrist", "Cổ tay (cm)", 'inputmode="decimal"', "Ngay trên xương cổ tay")}
       </div>
       ${field("bodyFat", "% mỡ từ máy InBody (nếu có)", 'inputmode="decimal" placeholder="Bỏ trống nếu không có"')}`;
     case 2:
