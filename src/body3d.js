@@ -60,15 +60,22 @@ export async function mountBody3D(container, { onSelect } = {}) {
     const nb = new THREE.Box3().setFromObject(neckMesh);
     const nc = nb.getCenter(new THREE.Vector3());
     const top = nb.max.y;
-    const skin = new THREE.MeshStandardMaterial({ color: 0xa9abb0, roughness: 0.35, metalness: 0.05 });
-    // Egg-shaped cranium + a softer jaw: a plain, faceless mannequin head. The neck muscles stay visible.
-    const head = new THREE.Mesh(new THREE.SphereGeometry(1, 48, 36), skin);
-    head.scale.set(0.07, 0.094, 0.085);
-    head.position.set(0, top + 0.045, nc.z + 0.008);
-    const jaw = new THREE.Mesh(new THREE.SphereGeometry(1, 40, 28), skin);
-    jaw.scale.set(0.056, 0.058, 0.062);
-    jaw.position.set(0, top + 0.004, nc.z + 0.02);
-    model.add(head, jaw);
+    const skin = new THREE.MeshStandardMaterial({ color: 0xc4c6ca, roughness: 0.28, metalness: 0.05 });
+    // Display-mannequin head: one smooth egg, wide at the crown and tapering to a soft chin,
+    // tilted slightly with the face forward. Faceless. The neck muscles below stay visible.
+    const prof = [];
+    for (let i = 0; i <= 48; i++) {
+      const y = -1 + (2 * i) / 48; // chin (-1) → crown (+1)
+      const r = Math.sqrt(Math.max(0, 1 - y * y)) * (0.78 + 0.22 * y) * (y < -0.55 ? 1 - (-0.55 - y) * 0.35 : 1);
+      prof.push(new THREE.Vector2(Math.max(r, 0.0001), y));
+    }
+    const egg = new THREE.LatheGeometry(prof, 64);
+    egg.computeVertexNormals();
+    const head = new THREE.Mesh(egg, skin);
+    head.scale.set(0.072, 0.112, 0.088);
+    head.rotation.x = -0.22; // chin forward, crown back
+    head.position.set(0, top + 0.062, nc.z + 0.016);
+    model.add(head);
   }
   // Center the figure on the floor and face the camera.
   const box = new THREE.Box3().setFromObject(model);
