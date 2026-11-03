@@ -17,6 +17,7 @@ export const A = {
   food: {}, // date -> food log
   body: {}, // date -> measurement
   health: {}, // date -> { steps, km } from Apple Health / manual
+  loads: {}, // exercise id -> { kg, reps, at } — last weight & reps used, prefilled next time
   loaded: new Set(),
 };
 
@@ -35,7 +36,7 @@ export async function loadRecent() {
   const from = addDays(mondayOf(today()), -35);
   const to = addDays(today(), 14);
   // Each part loads on its own: one failing never blocks the others.
-  const parts = [["workouts", () => S.range("workouts", from, to)], ["food", () => S.range("food", from, to)], ["body", () => S.latest("body", 120)], ["health", () => S.range("health", from, to)]];
+  const parts = [["workouts", () => S.range("workouts", from, to)], ["food", () => S.range("food", from, to)], ["body", () => S.latest("body", 120)], ["health", () => S.range("health", from, to)], ["loads", async () => (await S.get("meta", "loads"))?.byEx || {}]];
   const res = await Promise.allSettled(parts.map(([, f]) => f()));
   const failed = [];
   res.forEach((r, i) => {

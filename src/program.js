@@ -59,7 +59,9 @@ function splitFor(n, level) {
   if (n === 3) return level === 0 ? ["FA", "FB", "FC"] : ["UA", "LA", "FC"];
   if (n === 4) return ["UA", "LA", "UB", "LB"];
   if (n === 5) return ["UA", "LA", "PU", "PL", "LB"];
-  return ["PU", "PL", "LA", "UB", "LB", "FC"];
+  if (n === 6) return ["PU", "PL", "LA", "UB", "LB", "FC"];
+  // 7 gym days: one session per day; the 7th is a lighter full-body day (see coaching note about rest).
+  return ["PU", "PL", "LA", "UB", "LB", "FC", "FB"];
 }
 
 const LEVELS = ["Mới tập (< 6 tháng)", "Đã tập 6–24 tháng", "Trên 2 năm"];
@@ -133,7 +135,7 @@ function arrange(sessionKeys, gymDays, sportDays) {
         }
         // same-type sessions on consecutive days
         const j = days.indexOf(next);
-        if (j >= 0) {
+        if (j >= 0 && arr[j]) {
           const u = TEMPLATES[arr[j]];
           if ((t.lower && u.lower && !t.upper) || (t.upper && u.upper && !t.lower)) score -= 2;
         }

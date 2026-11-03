@@ -580,3 +580,14 @@ code { font-family: ui-monospace, Menlo, monospace; font-size: 12.5px; backgroun
 .eat-r .ghost { justify-self: start; }
 .credit3d { font-size: 10.5px; color: var(--muted); text-align: center; margin-top: -4px; }
 .stage3d { background: radial-gradient(60% 55% at 50% 42%, #23324a 0%, transparent 72%); }
+
+/* ---------- Set logging: weight picker + coach tips ---------- */
+.set select { width: 100%; min-width: 0; border: 1px solid var(--line); background: var(--sunk); color: var(--ink); border-radius: 12px; padding: 10px 6px; font-size: 16px; font-weight: 700; text-align: center; text-align-last: center; -webkit-appearance: none; appearance: none; }
+.set select:focus { border-color: var(--accent); outline: none; }
+.set.head span { font-size: 9.5px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); text-align: center; }
+.tip { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: 13px; padding: 10px 12px; border-radius: 14px; background: var(--sunk); border-left: 3px solid var(--chrome); }
+.tip.up { border-left-color: var(--accent); }
+.tip.down, .tip.deload { border-left-color: var(--warn); }
+.tip-apply { flex: none; border: 0; background: var(--accent); color: var(--accent-ink); border-radius: 999px; padding: 7px 12px; font-size: 11px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+.coach-sum { border-color: color-mix(in srgb, var(--accent) 45%, var(--line)); }
+.coach-sum p { font-size: 14px; }

@@ -1,5 +1,5 @@
 // Training: today's session logging, the full roadmap, and the exercise library.
-import { A, saveLater, loadDay } from "./state.js";
+import { A, saveLater, loadDay, aiContext } from "./state.js";
 import * as S from "./store.js";
 import { SPORTS } from "./calc.js";
 import { planFor, PHASES, phaseOf } from "./program.js";
@@ -24,10 +24,84 @@ function sessionKeyFor(date) {
   if (w?.sessionKey !== undefined) return w.sessionKey; // "" = chosen rest
   return planFor(A.prog, date).find((i) => i.kind === "gym")?.key || "";
 }
+// ---------------------------------------------------------------- weights memory & progression
+export const KG_STEPS = Array.from({ length: 40 }, (_, i) => (i + 1) * 2.5); // 2,5 → 100 kg
+const LOWER = new Set(["squat", "hinge", "glute", "single", "quad", "ham", "calves", "latlunge"]);
+
+/** "8–10" → [8, 10]; "12/chân" → [12, 12]; "30–45 giây" → [30, 45] (timed). */
+export function repRange(reps) {
+  const n = String(reps).match(/\d+/g)?.map(Number) || [];
+  return { lo: n[0] ?? 0, hi: n[1] ?? n[0] ?? 0, timed: /giây|phút|m\b/.test(reps) };
+}
+/** Most recent earlier session that logged this exercise. */
+function prevSession(date, id) {
+  const ds = Object.keys(A.workouts).filter((d) => d < date).sort().reverse();
+  for (const d of ds) {
+    const arr = (A.workouts[d].sets?.[id] || []).filter((s) => s.done);
+    if (arr.length) return { d, sets: arr };
+  }
+  return null;
+}
+/** Remembered weight/reps: saved memory first, then the last logged session. */
+function memoryOf(date, id) {
+  const m = A.loads[id];
+  if (m && (m.kg !== "" || m.reps !== "")) return m;
+  const p = prevSession(date, id);
+  return p ? { kg: p.sets.at(-1).kg, reps: p.sets.at(-1).reps } : null;
+}
+function remember(id, s, date) {
+  if (num(s.kg) == null && num(s.reps) == null) return;
+  A.loads[id] = { kg: s.kg ?? "", reps: s.reps ?? "", at: date };
+  saveLater("meta", "loads", () => ({ byEx: A.loads }), 1500);
+}
+
+/**
+ * Double-progression coach (ACSM 2009 / NSCA): all sets at the top of the rep range → add weight;
+ * below the bottom twice → hold or lighten. Returns { kind, text, kg? } or null.
+ */
+export function coachTip(date, ex) {
+  const ph = phaseOf(A.profile.programStart, date);
+  const r = repRange(ex.reps);
+  const prev = prevSession(date, ex.id);
+  if (!prev) return null;
+  const kg = Math.max(0, ...prev.sets.map((s) => num(s.kg) || 0));
+  const reps = prev.sets.map((s) => num(s.reps)).filter((x) => x != null);
+  if (!reps.length) return null;
+  const minReps = Math.min(...reps);
+  if (ph.idx === 3 && kg) {
+    const down = Math.max(2.5, Math.round((kg * 0.9) / 2.5) * 2.5);
+    return { kind: "deload", kg: down, text: `Tuần giảm tải: hạ tạ còn ${fmt(down, 1)} kg, tập nhẹ nhàng để cơ phục hồi.` };
+  }
+  if (r.timed) {
+    return minReps >= r.hi
+      ? { kind: "up", text: `Lần trước giữ đủ ${r.hi} giây mọi hiệp. Hôm nay tăng thêm 10–15 giây.` }
+      : null;
+  }
+  if (minReps >= r.hi && prev.sets.length >= Math.min(ex.sets, 2)) {
+    if (!kg) return { kind: "up", text: `Lần trước làm đủ ${r.hi} lần mọi hiệp không tạ. Hôm nay thêm tạ 2,5–5 kg hoặc làm chậm hơn (hạ 3 giây).` };
+    const inc = LOWER.has(ex.slot) && kg >= 20 ? 5 : 2.5;
+    const next = Math.min(100, kg + inc);
+    return { kind: "up", kg: next, text: `Lần trước bạn làm đủ ${r.hi} lần mọi hiệp với ${fmt(kg, 1)} kg. Hôm nay tăng lên ${fmt(next, 1)} kg.` };
+  }
+  // Two sessions in a row below the range → lighten.
+  const older = prevSession(prev.d, ex.id);
+  const olderMin = older ? Math.min(...older.sets.map((s) => num(s.reps)).filter((x) => x != null)) : Infinity;
+  if (minReps < r.lo && olderMin < r.lo && kg > 2.5) {
+    const down = kg - 2.5;
+    return { kind: "down", kg: down, text: `2 buổi liền chưa đạt ${r.lo} lần. Giảm còn ${fmt(down, 1)} kg để giữ kỹ thuật chuẩn, sau đó tăng lại.` };
+  }
+  if (minReps < r.lo) return { kind: "hold", text: `Lần trước chưa đạt ${r.lo} lần ở mọi hiệp. Giữ ${kg ? fmt(kg, 1) + " kg" : "mức này"}, cố thêm 1–2 lần mỗi hiệp.` };
+  return { kind: "hold", text: `Giữ ${kg ? fmt(kg, 1) + " kg" : "mức này"}, cố thêm 1 lần mỗi hiệp. Đạt ${r.hi} lần mọi hiệp là tăng tạ.` };
+}
+
 function setsOf(date, ex) {
   const arr = A.workouts[date]?.sets?.[ex.id];
   if (arr?.length) return arr;
-  return Array.from({ length: ex.sets }, () => ({ kg: "", reps: "", done: false }));
+  // Not logged yet: prefill with the remembered weight & reps so the person only has to tick.
+  const mem = memoryOf(date, ex.id);
+  const kg = mem?.kg ?? "";
+  const reps = mem?.reps || String(repRange(ex.reps).lo || "");
+  return Array.from({ length: ex.sets }, () => ({ kg, reps, done: false }));
 }
 function ensureSets(date, ex) {
   const w = getW(date);
@@ -105,10 +179,22 @@ function renderToday(root) {
   </section>
   <details class="card warm"><summary><b>Khởi động · 8 phút</b></summary><ul class="mini-list">${A.prog.warm.map((x) => `<li data-ex="${x.id}">${thumb(x.id, "s")}<span>${esc(x.vn)}</span></li>`).join("")}</ul></details>`;
 
+  // PT reminder for today: which exercises should go up in weight.
+  const tips = sess.exercises.map((ex) => [ex, coachTip(date, ex)]).filter(([, t]) => t);
+  const ups = tips.filter(([, t]) => t.kind === "up");
+  if (tips.length)
+    h += `<section class="card coach-sum"><span class="eyebrow">PT nhắc hôm nay</span>
+      <p>${ups.length ? `<b>${ups.length} bài nên tăng tạ/số lần:</b> ${ups.map(([ex]) => esc(ex.vn)).join(", ")}.` : "Giữ mức tạ như buổi trước và cố thêm 1 lần mỗi hiệp."}${tips.some(([, t]) => t.kind === "down") ? " Có bài nên giảm nhẹ tạ để giữ kỹ thuật." : ""}</p></section>`;
+  const kgOpts = (v) => {
+    const n = num(v);
+    const list = n != null && n > 0 && !KG_STEPS.includes(n) ? [...KG_STEPS, n].sort((a, b) => a - b) : KG_STEPS;
+    return `<option value="" ${n == null || n === 0 ? "selected" : ""}>Không tạ</option>${list.map((k) => `<option value="${k}" ${n === k ? "selected" : ""}>${fmt(k, 1)} kg</option>`).join("")}`;
+  };
   sess.exercises.forEach((ex, n) => {
     const arr = setsOf(date, ex);
     const all = arr.every((s) => s.done);
     const lt = lastTime(date, ex.id);
+    const tip = coachTip(date, ex);
     h += `<article class="ex${all ? " done" : ""}">
       <div class="ex-head" data-ex="${ex.id}" role="button" tabindex="0" aria-label="Xem hướng dẫn ${esc(ex.vn)}">
         ${thumb(ex.id)}
@@ -116,10 +202,11 @@ function renderToday(root) {
         <span class="rx num">${ex.sets} × ${esc(ex.reps)} · nghỉ ${esc(ex.rest)}${ex.rir ? " · " + esc(ex.rir) : ""}</span>
         ${lt ? `<span class="last">Lần trước ${esc(lt.txt)}</span>` : ""}</div>
       </div>
-      <div class="sets">${arr
+      ${tip ? `<div class="tip ${tip.kind}"><span>${esc(tip.text)}</span>${tip.kg != null && !all ? `<button class="tip-apply" data-act="apply" data-ex="${ex.id}" data-kg="${tip.kg}">Áp dụng</button>` : ""}</div>` : ""}
+      <div class="sets"><div class="set head"><span></span><span>Khối lượng</span><span>Số lần</span><span>Xong</span></div>${arr
         .map(
           (s, i) => `<div class="set"><span class="n">${i + 1}</span>
-          <input id="kg-${ex.id}-${i}" inputmode="decimal" placeholder="kg" value="${esc(s.kg)}" data-ex="${ex.id}" data-i="${i}" data-f="kg" aria-label="Hiệp ${i + 1}: kg">
+          <select id="kg-${ex.id}-${i}" data-ex="${ex.id}" data-i="${i}" data-f="kg" aria-label="Hiệp ${i + 1}: khối lượng">${kgOpts(s.kg)}</select>
           <input id="rp-${ex.id}-${i}" inputmode="numeric" placeholder="${esc(ex.reps)}" value="${esc(s.reps)}" data-ex="${ex.id}" data-i="${i}" data-f="reps" aria-label="Hiệp ${i + 1}: số lần">
           <button class="tick" data-act="tick" data-ex="${ex.id}" data-i="${i}" aria-pressed="${!!s.done}" aria-label="Xong hiệp ${i + 1}">✓</button></div>`
         )
@@ -130,7 +217,9 @@ function renderToday(root) {
   if (A.prog.cardio?.extra && (A.profile.goal === "cut" || A.profile.goal === "recomp")) h += `<div class="card"><span class="eyebrow">Cardio cuối buổi</span><p>${esc(A.prog.cardio.text)}</p></div>`;
   h += `<details class="card warm"><summary><b>Giãn cơ · 5 phút</b></summary><ul class="mini-list">${A.prog.cool(sess).map((id) => `<li data-ex="${id}">${thumb(id, "s")}<span>${esc(exName(id))}</span></li>`).join("")}</ul></details>
   <button class="primary block" data-act="complete" aria-pressed="${!!w?.completed}">${w?.completed ? "Đã hoàn thành buổi tập ✓" : "Hoàn thành buổi tập"}</button>
-  <p class="muted sm">Tăng tiến: khi làm đủ số lần cao nhất ở mọi hiệp với kỹ thuật chuẩn, buổi sau tăng tạ (chân +2,5–5 kg, tay +1–2 kg).</p>`;
+  ${w?.aiReview ? `<div class="ai-box"><span class="eyebrow">PT AI đánh giá buổi tập</span>${md(w.aiReview)}</div>` : ""}
+  ${AI.AI_READY && done > 0 ? `<button class="ghost block" data-act="ai-session">${w?.aiReview ? "Đánh giá lại với PT AI" : "Nhờ PT AI đánh giá buổi tập"}</button>` : ""}
+  <p class="muted sm">Tăng tiến: khi làm đủ số lần cao nhất ở mọi hiệp với kỹ thuật chuẩn, buổi sau tăng tạ (chân +2,5–5 kg, tay +2,5 kg). Hệ thống nhớ mức tạ của bạn, buổi sau chỉ cần tick.</p>`;
   root.innerHTML = h;
 }
 
@@ -354,14 +443,30 @@ export async function renderTrain(root, sub) {
 
   if (root._bound) return;
   root._bound = true;
-  root.addEventListener("input", (e) => {
+  const onEdit = async (e) => {
     const t = e.target;
     if (!t.dataset.f) return;
     const ex = A.prog.sessions[sessionKeyFor(curDate)]?.exercises.find((x) => x.id === t.dataset.ex);
     if (!ex) return;
-    ensureSets(curDate, ex)[+t.dataset.i][t.dataset.f] = t.value.trim();
+    const arr = ensureSets(curDate, ex);
+    const i = +t.dataset.i, v = t.value.trim();
+    const old = arr[i][t.dataset.f];
+    if (old === v) return;
+    arr[i][t.dataset.f] = v;
+    // Changing the weight carries over to the following sets not done yet (e.g. moving up a plate).
+    if (t.dataset.f === "kg") {
+      for (let j = i + 1; j < arr.length; j++) if (!arr[j].done && arr[j].kg === old) arr[j].kg = v;
+      remember(ex.id, arr[i], curDate);
+      saveLater("workouts", curDate, () => A.workouts[curDate], 400);
+      const y = scrollY;
+      await renderTrain(root, root.dataset.sub);
+      scrollTo(0, y);
+      return;
+    }
     saveLater("workouts", curDate, () => A.workouts[curDate], 900);
-  });
+  };
+  root.addEventListener("input", onEdit);
+  root.addEventListener("change", onEdit);
   root.addEventListener("click", async (e) => {
     const exEl = e.target.closest("[data-ex]:not(input):not(button.tick):not([data-act])");
     if (exEl && !e.target.closest("input")) return showExercise(exEl.dataset.ex);
@@ -418,8 +523,9 @@ export async function renderTrain(root, sub) {
           if (!s.kg) s.kg = arr[i - 1].kg;
           if (!s.reps) s.reps = arr[i - 1].reps;
         }
+        if (s.done) remember(ex.id, s, date);
         if (s.done && navigator.vibrate) navigator.vibrate(15);
-      } else arr.push({ kg: arr.at(-1)?.kg || "", reps: "", done: false });
+      } else arr.push({ kg: arr.at(-1)?.kg ?? "", reps: arr.at(-1)?.reps ?? "", done: false }); // copy the last set
       saveLater("workouts", date, () => A.workouts[date], 300);
       const y = scrollY;
       await rerender();
@@ -433,6 +539,47 @@ export async function renderTrain(root, sub) {
       saveLater("workouts", date, () => A.workouts[date], 0);
       if (w.completed) toast("Tuyệt vời! Đã ghi nhận buổi tập.", "good");
       return rerender();
+    }
+    if (a === "apply") {
+      const ex = A.prog.sessions[sessionKeyFor(date)].exercises.find((x) => x.id === b.dataset.ex);
+      const arr = ensureSets(date, ex);
+      arr.forEach((s) => !s.done && (s.kg = b.dataset.kg));
+      remember(ex.id, arr[0], date);
+      saveLater("workouts", date, () => A.workouts[date], 300);
+      toast(`Đã đặt ${fmt(+b.dataset.kg, 1)} kg cho ${ex.vn}.`, "good");
+      const y = scrollY;
+      await rerender();
+      scrollTo(0, y);
+      return;
+    }
+    if (a === "ai-session") {
+      const sess = A.prog.sessions[sessionKeyFor(date)];
+      const w = getW(date);
+      b.disabled = true;
+      b.textContent = "PT AI đang xem buổi tập…";
+      const lines = sess.exercises.map((ex) => {
+        const now = (w.sets?.[ex.id] || []).filter((s) => s.done).map((s) => `${num(s.kg) ? s.kg + "kg" : "không tạ"}×${s.reps || "?"}`).join(", ") || "chưa tập";
+        const prev = prevSession(date, ex.id);
+        const before = prev ? prev.sets.map((s) => `${num(s.kg) ? s.kg + "kg" : "không tạ"}×${s.reps || "?"}`).join(", ") + ` (${prev.d})` : "chưa có";
+        return `- ${ex.vn} (mục tiêu ${ex.sets}×${ex.reps}, ${ex.rir || ""}): hôm nay ${now}; lần trước ${before}`;
+      });
+      const ph = phaseOf(A.profile.programStart, date);
+      try {
+        const txt = await AI.ask(
+          `Đánh giá buổi tập "${sess.name}" ngày ${date} (tuần ${ph.week}/12, giai đoạn ${ph.name}) theo nguyên tắc tăng tiến kép:
+${lines.join("\n")}
+Viết ngắn: 1) Nhận xét chung (1–2 câu), 2) Bài nào buổi sau nên TĂNG tạ hoặc số lần (ghi rõ kg mới, bước 2,5 kg), bài nào GIỮ, bài nào GIẢM, 3) 1 lưu ý kỹ thuật hoặc phục hồi.`,
+          AI.PT_SYSTEM + "\n\n" + aiContext()
+        );
+        w.aiReview = txt;
+        saveLater("workouts", date, () => A.workouts[date], 0);
+        return rerender();
+      } catch (err) {
+        b.disabled = false;
+        b.textContent = "Thử lại";
+        toast(AI.friendlyError(err), "bad");
+      }
+      return;
     }
     if (a === "restart") {
       if (b.dataset.armed) {
