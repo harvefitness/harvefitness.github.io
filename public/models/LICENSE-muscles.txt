@@ -11,6 +11,6 @@ https://creativecommons.org/licenses/by-sa/4.0/
 Changes made for this website (tools/build-muscles.mjs): only the superficial skeletal muscles
 of the "economy" quality level kept; bursae, fasciae, tendon sheaths, ligaments and deep / visceral
 muscles removed; muscles merged into 18 fitness muscle groups plus one background mesh; the
-external abdominal oblique aponeurosis in front of the rectus abdominis removed; the external abdominal oblique and the background mesh simplified to ~12,000 triangles with
+external abdominal oblique aponeurosis in front of the rectus abdominis removed; face and skull muscles above the neck removed (the site renders a plain mannequin head); the external abdominal oblique and the background mesh simplified to ~12,000 triangles with
 meshoptimizer; recompressed with EXT_meshopt_compression. This adapted model is distributed under
 the same CC BY-SA 4.0 license.

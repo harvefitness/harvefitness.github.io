@@ -22,7 +22,7 @@ const GROUPS = {
   forearm: [/brachioradialis/, /flexor_carpi/, /extensor_carpi/, /^extensor_digitorum$/, /extensor_digiti_minimi/, /palmaris_longus/, /pronator_teres/, /flexor_digitorum_superficialis/, /abductor_pollicis_longus/, /extensor_pollicis/],
   abs: ["rectus_abdominis_muscle", /pyramidalis/],
   obliques: ["external_abdominal_oblique_muscle"],
-  neck: ["sternocleidomastoid_muscle"],
+  neck: ["sternocleidomastoid_muscle", /scalene/, /splenius/, /levator_scapulae/, /semispinalis_capitis/],
   trapezius: [/part_of_trapezius_muscle$/],
   "upper-back": ["latissimus_dorsi_muscle", "rhomboid_major_muscle", "rhomboid_minor_muscle", "teres_major_muscle"],
   "lower-back": ["iliocostalis_lumborum_muscle", "iliocostalis_thoracis_muscle", "longissimus_thoracis_muscle", /spinalis_thoracis/],
@@ -34,7 +34,7 @@ const GROUPS = {
   calves: ["lateral_head_of_gastrocnemius", "medial_head_of_gastrocnemius", "soleus_muscle"],
 };
 // Not visible from outside or not useful for a fitness figure.
-const DROP = /bursa|fascia|sheath|retinacul|aponeuros|ligament|tendon|intercostal|diaphragm|levator_ani|coccygeus|pelvic|perine|sphincter|urethr|larynx|laryng|arytenoid|cricothyroid|thyroarytenoid|vocal|tongue|glossus|palat|pharyn|uvula|tensor_tympani|stapedius|ocul|rectus_(superior|inferior|medialis|lateralis)$|oblique_muscle$|ciliary|tarsal|subcostal|transversus_thoracis|transversus_abdominis|internal_abdominal_oblique|quadratus_lumborum|psoas|iliacus|multifidus|rotatores|semispinalis|interspinal|intertransvers|levatores_costarum|obturator|gemellus|piriformis|quadratus_femoris|popliteus|tibialis_posterior|flexor_hallucis_longus|flexor_digitorum_longus|subscapularis|supraspinatus|pectoralis_minor|serratus_posterior|splenius|longus_(colli|capitis)|scalene|hyoid|digastric|stylo|mylo|genio|platysma|insertion|origin/;
+const DROP = /bursa|fascia|sheath|retinacul|aponeuros|ligament|tendon|intercostal|diaphragm|levator_ani|coccygeus|pelvic|perine|sphincter|urethr|larynx|laryng|arytenoid|cricothyroid|thyroarytenoid|vocal|tongue|glossus|palat|pharyn|uvula|tensor_tympani|stapedius|ocul|rectus_(superior|inferior|medialis|lateralis)$|oblique_muscle$|ciliary|tarsal|subcostal|transversus_thoracis|transversus_abdominis|internal_abdominal_oblique|quadratus_lumborum|psoas|iliacus|multifidus|rotatores|semispinalis_(thoracis|cervicis)|interspinal|intertransvers|levatores_costarum|obturator|gemellus|piriformis|quadratus_femoris|popliteus|tibialis_posterior|flexor_hallucis_longus|flexor_digitorum_longus|subscapularis|supraspinatus|pectoralis_minor|serratus_posterior|longus_(colli|capitis)|hyoid|digastric|stylo|mylo|genio|platysma|insertion|origin/;
 
 const groupOf = (base) => {
   for (const [k, list] of Object.entries(GROUPS)) for (const p of list) if (typeof p === "string" ? p === base : p.test(base)) return k;
@@ -144,6 +144,40 @@ for (const chunk of manifest.chunks.filter((c) => c.system === "muscular")) {
     b.idx = keep;
     console.log(k, "removed over abs:", removed);
   }
+}
+
+// Face & skull muscles look unsettling on a fitness figure: drop everything above the neck
+// (the site draws a smooth mannequin head instead).
+{
+  // Head boundary from the sternocleidomastoid (mastoid attachment) only.
+  const scm = [];
+  for (const s of manifest.structures) if (/sternocleidomastoid_muscle_(l|r)$/.test(s.id)) scm.push(...s.meshes);
+  const neck = buckets.get("neck");
+  let top = 1.575, zMid = 0;
+  { let zs = 0, n = 0; for (let i = 0; i < neck.pos.length; i += 3) { zs += neck.pos[i + 2]; n++; } zMid = zs / n; }
+  const cut = top - 0.035;
+  const isHead = (cy, cz) => cy > cut || (cy > 1.47 && cz - zMid > 0.045); // skull, or face in front of the neck
+  for (const [k, b] of buckets) {
+    if (k === "trapezius") continue;
+    const keep = [];
+    let removed = 0;
+    for (let t = 0; t < b.idx.length; t += 3) {
+      const cy = (b.pos[b.idx[t] * 3 + 1] + b.pos[b.idx[t + 1] * 3 + 1] + b.pos[b.idx[t + 2] * 3 + 1]) / 3;
+      const cz = (b.pos[b.idx[t] * 3 + 2] + b.pos[b.idx[t + 1] * 3 + 2] + b.pos[b.idx[t + 2] * 3 + 2]) / 3;
+      if (isHead(cy, cz)) removed++;
+      else keep.push(b.idx[t], b.idx[t + 1], b.idx[t + 2]);
+    }
+    b.idx = keep;
+    if (removed) console.log(k, "removed above neck:", removed);
+  }
+  // trapezius: keep only below the skull base
+  const tr = buckets.get("trapezius"), keep = [];
+  for (let t = 0; t < tr.idx.length; t += 3) {
+    const cy = (tr.pos[tr.idx[t] * 3 + 1] + tr.pos[tr.idx[t + 1] * 3 + 1] + tr.pos[tr.idx[t + 2] * 3 + 1]) / 3;
+    if (cy <= top - 0.01) keep.push(tr.idx[t], tr.idx[t + 1], tr.idx[t + 2]);
+  }
+  tr.idx = keep;
+  console.log("neck top y =", top.toFixed(3));
 }
 
 // Output document

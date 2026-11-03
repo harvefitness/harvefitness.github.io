@@ -54,6 +54,22 @@ export async function mountBody3D(container, { onSelect } = {}) {
       muscles.push(o);
     }
   });
+  // Smooth mannequin head & neck (face muscles were removed from the model on purpose).
+  const neckMesh = muscles.find((m) => m.userData.key === "neck");
+  if (neckMesh) {
+    const nb = new THREE.Box3().setFromObject(neckMesh);
+    const nc = nb.getCenter(new THREE.Vector3());
+    const top = nb.max.y;
+    const skin = new THREE.MeshStandardMaterial({ color: 0xa9abb0, roughness: 0.35, metalness: 0.05 });
+    // Egg-shaped cranium + a softer jaw: a plain, faceless mannequin head. The neck muscles stay visible.
+    const head = new THREE.Mesh(new THREE.SphereGeometry(1, 48, 36), skin);
+    head.scale.set(0.07, 0.094, 0.085);
+    head.position.set(0, top + 0.045, nc.z + 0.008);
+    const jaw = new THREE.Mesh(new THREE.SphereGeometry(1, 40, 28), skin);
+    jaw.scale.set(0.056, 0.058, 0.062);
+    jaw.position.set(0, top + 0.004, nc.z + 0.02);
+    model.add(head, jaw);
+  }
   // Center the figure on the floor and face the camera.
   const box = new THREE.Box3().setFromObject(model);
   const center = box.getCenter(new THREE.Vector3());
