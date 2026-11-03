@@ -2,10 +2,7 @@
 // or, when public/config.js has no Firebase keys yet, a local demo mode.
 import { initializeApp } from "firebase/app";
 import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, signOut as fbSignOut, onAuthStateChanged } from "firebase/auth";
-import {
-  initializeFirestore, persistentLocalCache, persistentMultipleTabManager,
-  doc, getDoc, setDoc, deleteDoc, collection, getDocs, query, where, documentId, orderBy, limit,
-} from "firebase/firestore";
+import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, doc, getDoc, setDoc, deleteDoc, collection, getDocs } from "firebase/firestore";
 
 const cfg = window.APP_CONFIG || {};
 export const DEMO = !cfg.firebase?.apiKey;
@@ -140,28 +137,23 @@ export async function del(col, id) {
   }
   await deleteDoc(doc(db, "users", uid, col, id));
 }
-/** List docs whose id (YYYY-MM-DD) is in [from, to]. Returns {id: data}. */
+/**
+ * List docs whose id (YYYY-MM-DD) is in [from, to]. Returns {id: data}.
+ * Reads the person's whole sub-collection (one small doc per day) and filters here:
+ * no query filters means no index or rule edge cases on Firestore's side.
+ */
 export async function range(col, from, to) {
-  if (DEMO) {
-    const c = demoAll()[col] || {};
-    return Object.fromEntries(Object.entries(c).filter(([k]) => (!from || k >= from) && (!to || k <= to)));
+  let all;
+  if (DEMO) all = demoAll()[col] || {};
+  else {
+    all = {};
+    const snap = await getDocs(collection(db, "users", uid, col));
+    snap.forEach((d) => (all[d.id] = d.data()));
   }
-  const cons = [];
-  if (from) cons.push(where(documentId(), ">=", from));
-  if (to) cons.push(where(documentId(), "<=", to));
-  const snap = await getDocs(query(collection(db, "users", uid, col), ...cons));
-  const out = {};
-  snap.forEach((d) => (out[d.id] = d.data()));
-  return out;
+  return Object.fromEntries(Object.entries(all).filter(([k]) => (!from || k >= from) && (!to || k <= to)));
 }
 /** Latest n docs by id. */
 export async function latest(col, n = 60) {
-  if (DEMO) {
-    const c = demoAll()[col] || {};
-    return Object.fromEntries(Object.entries(c).sort((a, b) => (a[0] < b[0] ? 1 : -1)).slice(0, n));
-  }
-  const snap = await getDocs(query(collection(db, "users", uid, col), orderBy(documentId(), "desc"), limit(n)));
-  const out = {};
-  snap.forEach((d) => (out[d.id] = d.data()));
-  return out;
+  const all = await range(col);
+  return Object.fromEntries(Object.entries(all).sort((a, b) => (a[0] < b[0] ? 1 : -1)).slice(0, n));
 }

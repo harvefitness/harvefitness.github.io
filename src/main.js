@@ -306,7 +306,7 @@ S.initStore(async (user, reason) => {
     }
   } catch (e) {
     console.error(e);
-    toast("Không tải được dữ liệu. Kiểm tra mạng.", "bad");
+    toast(e.partial ? `Chưa tải được một phần lịch sử (${e.message}). Dữ liệu mới vẫn lưu bình thường.` : `Không tải được hồ sơ (${e.code || e.message}). Kiểm tra mạng rồi mở lại.`, "bad");
   }
   shell();
   if (!A.profile) location.hash = "#setup";

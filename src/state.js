@@ -31,10 +31,19 @@ export const waterGoalCups = (date) => Math.round(waterFor(A.t, trainingHours(A.
 export async function loadRecent() {
   const from = addDays(mondayOf(today()), -35);
   const to = addDays(today(), 14);
-  const [w, f, b] = await Promise.all([S.range("workouts", from, to), S.range("food", from, to), S.latest("body", 120)]);
-  Object.assign(A.workouts, w);
-  Object.assign(A.food, f);
-  Object.assign(A.body, b);
+  // Each part loads on its own: one failing never blocks the others.
+  const parts = [["workouts", () => S.range("workouts", from, to)], ["food", () => S.range("food", from, to)], ["body", () => S.latest("body", 120)]];
+  const res = await Promise.allSettled(parts.map(([, f]) => f()));
+  const failed = [];
+  res.forEach((r, i) => {
+    const key = parts[i][0];
+    if (r.status === "fulfilled") Object.assign(A[key], r.value);
+    else {
+      console.error("Load", key, r.reason);
+      failed.push(`${key}: ${r.reason?.code || r.reason?.message || r.reason}`);
+    }
+  });
+  if (failed.length) throw Object.assign(new Error(failed.join("; ")), { partial: true });
 }
 
 export async function loadDay(col, date) {
