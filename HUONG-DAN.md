@@ -4,7 +4,7 @@ Tổng thời gian khoảng 20–30 phút, **hoàn toàn miễn phí**. Bạn ch
 
 | Dịch vụ | Dùng để | Chi phí |
 | --- | --- | --- |
-| GitHub Pages | Chứa website, cho link `https://harvefitness.github.io/dnt-harve-fitness-provip/` | Miễn phí |
+| GitHub Pages | Chứa website, cho link `https://harvefitness.github.io/` | Miễn phí |
 | Firebase Authentication | Đăng nhập bằng Google | Miễn phí |
 | Cloud Firestore | Lưu dữ liệu riêng từng người | Miễn phí đến 50.000 lượt đọc/ngày |
 | Firebase AI Logic (Gemini) | Chat PT AI, ước tính calo, nhận xét bữa ăn | Miễn phí (có giới hạn số câu hỏi mỗi phút/ngày) |
@@ -67,7 +67,7 @@ Quy tắc này nghĩa là mỗi người chỉ đọc và ghi được dữ li�
 Sau khi Claude đẩy code lên (hoặc bạn sửa `public/config.js` trên GitHub), đợi 1–2 phút để GitHub tự build. Kiểm tra ở tab **Actions** trong kho (dấu ✓ xanh là xong). Rồi mở:
 
 ```
-https://harvefitness.github.io/dnt-harve-fitness-provip/
+https://harvefitness.github.io/
 ```
 
 **Thêm vào màn hình chính như app:**
