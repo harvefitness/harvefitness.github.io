@@ -16,6 +16,10 @@ window.APP_CONFIG = {
   // Model Gemini, thử lần lượt từ trái sang phải.
   geminiModels: ["gemini-3.5-flash-lite", "gemini-3.6-flash", "gemini-3.5-flash"],
 
+  // App Check chống dùng ké Gemini (xem HUONG-DAN.md). Để trống siteKey = tắt.
+  // provider: "v3" (reCAPTCHA v3) hoặc "enterprise" (reCAPTCHA Enterprise).
+  appCheck: { provider: "v3", siteKey: "" },
+
   // Chỉ cho các email này đăng nhập. Để trống [] = ai có tài khoản Google cũng vào được
   // (dữ liệu vẫn riêng từng người). VD: ["ban@gmail.com", "banbe@gmail.com"]
   allowedEmails: [],

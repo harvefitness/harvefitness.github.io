@@ -1,6 +1,6 @@
 // Gemini through Firebase AI Logic (Gemini Developer API, free Spark plan).
 // The API key stays inside Firebase; nothing secret ships in the website.
-import { DEMO, firebaseApp } from "./store.js";
+import { DEMO, firebaseApp, appCheckReady } from "./store.js";
 
 // The Firebase AI SDK is loaded only when the person first uses an AI feature (keeps start-up light).
 let sdk = null;
@@ -15,6 +15,7 @@ let working = null; // first model that answered
 export const AI_READY = !DEMO;
 
 async function getAi() {
+  await appCheckReady; // Gemini requests must carry an App Check token once enforcement is on
   const { getAI, GoogleAIBackend } = await loadSdk();
   if (!ai) ai = getAI(firebaseApp(), { backend: new GoogleAIBackend() });
   return ai;

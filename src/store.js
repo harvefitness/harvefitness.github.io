@@ -10,6 +10,9 @@ export const DEMO = !cfg.firebase?.apiKey;
 let app, auth, db, uid = null;
 export let currentUser = null;
 
+/** Resolves once App Check is set up (or right away when it is not configured). */
+export let appCheckReady = Promise.resolve();
+
 export function firebaseApp() {
   return app;
 }
@@ -34,6 +37,16 @@ export function initStore(onUser) {
     return;
   }
   app = initializeApp(cfg.firebase);
+  // App Check (anti-abuse for Gemini): only switched on when a reCAPTCHA site key is set in config.js.
+  const ac = cfg.appCheck;
+  if (ac?.siteKey) {
+    appCheckReady = import("firebase/app-check")
+      .then(({ initializeAppCheck, ReCaptchaV3Provider, ReCaptchaEnterpriseProvider }) => {
+        const Provider = ac.provider === "enterprise" ? ReCaptchaEnterpriseProvider : ReCaptchaV3Provider;
+        initializeAppCheck(app, { provider: new Provider(ac.siteKey), isTokenAutoRefreshEnabled: true });
+      })
+      .catch((e) => console.warn("App Check không khởi động được:", e));
+  }
   auth = getAuth(app);
   auth.languageCode = "vi";
   db = getFirestore(app);
