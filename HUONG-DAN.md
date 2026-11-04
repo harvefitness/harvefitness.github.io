@@ -45,16 +45,29 @@ Tổng thời gian khoảng 20–30 phút, **hoàn toàn miễn phí**. Bạn ch
 
 ```
 rules_version = '2';
+// Mỗi người chỉ đọc/ghi được dữ liệu của chính mình: users/{uid}/...
+// inbox/{mã bí mật}: phím tắt Apple Health gửi số bước vào đây (không cần đăng nhập).
+// Mã dài 32 ký tự ngẫu nhiên, chỉ chủ tài khoản biết; không ai liệt kê hay xóa được.
 service cloud.firestore {
   match /databases/{database}/documents {
     match /users/{uid}/{document=**} {
       allow read, write: if request.auth != null && request.auth.uid == uid;
     }
+    match /inbox/{key} {
+      function ok(v) { return (v is string && v.size() < 40) || v is number; }
+      allow get: if key.size() >= 24;
+      allow list, delete: if false;
+      allow create, update: if key.size() >= 24
+        && request.resource.data.keys().hasOnly(['steps', 'km', 'date'])
+        && ok(request.resource.data.get('steps', ''))
+        && ok(request.resource.data.get('km', ''))
+        && ok(request.resource.data.get('date', ''));
+    }
   }
 }
 ```
 
-Quy tắc này nghĩa là mỗi người chỉ đọc và ghi được dữ liệu của chính mình. Bạn bè không xem được của nhau, kể cả bạn.
+Quy tắc này nghĩa là mỗi người chỉ đọc và ghi được dữ liệu của chính mình. Bạn bè không xem được của nhau, kể cả bạn. Phần `inbox` là hộp nhận số bước từ phím tắt Apple Health (Cách 3): mỗi người có 1 mã bí mật 32 ký tự, chỉ ghi được 3 ô số bước, km, ngày; không ai liệt kê hay xóa được.
 
 ## Bước 5: Bật Gemini (PT AI)
 

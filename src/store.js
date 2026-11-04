@@ -124,6 +124,13 @@ export async function saveProfile(profile) {
   await setDoc(doc(db, "users", uid), { profile: clean(profile), updatedAt: Date.now(), email: currentUser?.email || "" }, { merge: true });
 }
 
+/** Steps inbox written by the Apple Health shortcut (inbox/{secret key}, no sign-in needed there). */
+export async function getInbox(key) {
+  if (DEMO || !key) return null;
+  const s = await getDoc(doc(db, "inbox", key));
+  return s.exists() ? s.data() : null;
+}
+
 export async function get(col, id) {
   if (DEMO) return demoAll()[col]?.[id] || null;
   const s = await getDoc(doc(db, "users", uid, col, id));
