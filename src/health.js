@@ -23,7 +23,7 @@ async function getInboxKey(create = false) {
   await S.set("meta", "health", { inbox: inboxKey });
   return inboxKey;
 }
-const inboxUrl = (key) => `https://firestore.googleapis.com/v1/projects/${cfg.firebase?.projectId || "PROJECT"}/databases/(default)/documents/inbox/${key}?key=${cfg.firebase?.apiKey || "KEY"}`;
+const inboxUrl = (key) => `https://firestore.googleapis.com/v1/projects/${cfg.firebase?.projectId || "PROJECT"}/databases/(default)/documents/inbox/${key}`;
 
 /** "2026-11-04", "4/11/2026", "04.11.2026" → "2026-11-04"; missing → today; too old / future → null. */
 function normDate(v) {
@@ -82,13 +82,10 @@ export async function pullInbox() {
 export const SHORTCUT_NAME = "DNT Health";
 const JSON_TPL = '{"fields":{"steps":{"stringValue":"SO_BUOC"}}}';
 const siteUrl = () => location.href.split("#")[0];
-// iOS 26+: "webapp://<site>" opens the home-screen web app (https:// would open Safari).
-const appReturnUrl = () => siteUrl().replace(/^https?:\/\//, "webapp://") + "#home";
-/** Run the shortcut; when it finishes (or fails / is cancelled) Shortcuts opens the web app again. */
-export const shortcutRunUrl = () => {
-  const back = encodeURIComponent(appReturnUrl());
-  return `shortcuts://x-callback-url/run-shortcut?name=${encodeURIComponent(SHORTCUT_NAME)}&x-success=${back}&x-cancel=${back}&x-error=${back}`;
-};
+// iOS 26+: "webapp://<site>" opens the home-screen web app (https:// would open Safari, whose storage is separate).
+const webappUrl = (hash = "#home") => siteUrl().replace(/^https?:\/\//, "webapp://") + hash;
+// Plain run (the shortcut's last action "Mở URL webapp://…#health-<steps>" brings the app back).
+export const shortcutRunUrl = () => `shortcuts://run-shortcut?name=${encodeURIComponent(SHORTCUT_NAME)}`;
 
 
 /** "#health-8234-5,6" → { steps, km } or null */
@@ -216,89 +213,51 @@ export function openManual(after) {
 }
 
 export async function openGuide() {
-  const url = `${siteUrl()}#health-`;
   const key = await getInboxKey(true).catch(() => null);
   const api = key ? inboxUrl(key) : "";
-  const appUrl = appReturnUrl();
-  const desc3 = `Tìm TẤT CẢ mẫu sức khỏe loại Số bước có ngày bắt đầu là hôm nay (không giới hạn số lượng), Tính toán thống kê TỔNG, làm tròn thành số nguyên. Tìm TẤT CẢ mẫu loại Quãng đường đi bộ + chạy của hôm nay, tính TỔNG, đổi sang km, làm tròn 2 chữ số thập phân. Lấy Ngày hiện tại, định dạng tùy chỉnh yyyy-MM-dd. Sau đó dùng tác vụ Nhận nội dung của URL với URL: ${api} , Phương thức PATCH, Tiêu đề: Content-Type = application/json và Referer = https://harvefitness.github.io/ , Nội dung yêu cầu JSON có 1 khóa "fields" là Từ điển gồm 3 khóa: "steps" là Từ điển có khóa "stringValue" = tổng số bước (dạng Văn bản); "km" là Từ điển có khóa "stringValue" = tổng km (dạng Văn bản); "date" là Từ điển có khóa "stringValue" = ngày đã định dạng (dạng Văn bản). KHÔNG mở Safari. Cuối cùng thêm tác vụ Mở URL với đúng địa chỉ: ${appUrl} (để quay lại app HARVE Fitness trên màn hình chính).`;
-  const desc = `Tìm TẤT CẢ mẫu sức khỏe loại Số bước có ngày bắt đầu là hôm nay (không giới hạn số lượng), rồi Tính toán thống kê: TỔNG, làm tròn thành số nguyên không có dấu phân cách. Tìm TẤT CẢ mẫu loại Quãng đường đi bộ + chạy của hôm nay, tính TỔNG, đổi sang km, làm tròn 1 chữ số thập phân. Sau đó mở URL: ${url}[tổng số bước]-[tổng km]`;
-  const askNote = `<p class="muted sm">Lần đầu chạy, iPhone hỏi quyền: chọn <b>Cho phép</b> cho <b>Số bước</b> và <b>Quãng đường đi bộ + chạy</b>.</p>`;
-  const dupNote = `<p class="muted sm">Nếu iPhone báo đã có phím tắt trùng tên: quay ra danh sách phím tắt, bấm giữ <b>${SHORTCUT_NAME}</b> cũ → <b>Xóa</b>, rồi đổi tên lại.</p>`;
+  const openUrl = webappUrl("#health-"); // + the steps variable
+  const desc2 = `Tìm TẤT CẢ mẫu sức khỏe loại Số bước có ngày bắt đầu là hôm nay, tắt giới hạn số lượng. Tính toán thống kê TỔNG (không phải trung bình) của các mẫu đó, rồi Làm tròn số thành số nguyên. Tạo tác vụ Văn bản có đúng nội dung: {"fields":{"steps":{"stringValue":"[số đã làm tròn]"}}} . Sau đó dùng tác vụ Nhận nội dung của URL với URL: ${api} , Phương thức PATCH, Nội dung yêu cầu là Tệp = tác vụ Văn bản ở trên. Cuối cùng Mở URL: ${openUrl}[số đã làm tròn]`;
+  const S1 = "<b>1</b>", S2 = "<b>2</b>", S3 = "<b>3</b>";
   const body = openSheet(`<h2>Kết nối <em>Apple Health.</em></h2>
-    <p class="muted">Web không tự đọc được app Sức khỏe, nên cần 1 phím tắt nhỏ trên <b>iPhone</b>. Chỉ làm 1 lần, khoảng 3 phút. Chọn 1 trong 3 cách, nên dùng <b>Cách 3</b>.</p>
-    <div class="seg full"><button class="seg-b" data-way="3" aria-pressed="true">Cách 3 ⭐</button><button class="seg-b" data-way="2" aria-pressed="false">Cách 2</button><button class="seg-b" data-way="1" aria-pressed="false">Cách 1</button></div>
+    <p class="muted">Web không tự đọc được app Sức khỏe, nên cần 1 phím tắt nhỏ trên <b>iPhone</b>. Làm 1 lần, khoảng 5 phút. Phím tắt gửi số bước lên web rồi mở lại app <b>HARVE Fitness</b> trên màn hình chính, không qua Safari.</p>
+    ${key ? `<div class="seg full"><button class="seg-b" data-way="1" aria-pressed="true">Cách 1 ⭐</button><button class="seg-b" data-way="2" aria-pressed="false">Cách 2</button></div>
 
-    <section class="way" data-way-body="3">
-      <h3>Cách 3: <em>Gửi thẳng vào web</em></h3>
-      <p class="muted sm">Không mở Safari. Phím tắt gửi số bước lên web rồi tự quay lại app <b>HARVE Fitness</b> trên màn hình chính (iOS 26 trở lên).</p>
-      ${key ? `<ol class="guide">
-        <li>Bấm nút <b>Sao chép mô tả</b> ở dưới.</li>
-        <li>Mở app <b>Phím tắt</b> → bấm <b>+</b> ở góc trên bên phải.</li>
-        <li>Bấm vào ô <b>Mô tả phím tắt</b> → dán → bấm <b>↵</b>. Chờ iPhone tạo xong.</li>
-        <li>Bấm vào tên phím tắt ở trên cùng → <b>Đổi tên</b> → gõ đúng <b class="hl">${SHORTCUT_NAME}</b>.</li>
-        <li>Bấm <b>▶</b> để chạy thử. iPhone hỏi quyền: chọn <b>Cho phép</b> (Sức khỏe) và <b>Luôn cho phép</b> (kết nối tới firestore.googleapis.com).</li>
-        <li>iPhone tự quay lại <b>HARVE Fitness</b> và web báo <b>"Đã nhận … bước"</b>. Xong!</li>
-      </ol>
-      ${dupNote}
-      <div class="desc-box">${esc(desc3)}</div>
-      <button class="primary block" data-copy="desc3">Sao chép mô tả</button>
-      <p class="muted sm">Đoạn mô tả có <b>mã riêng của bạn</b>, đừng gửi cho người khác.</p>
-      <h3 class="push-h">Không có ô Mô tả? <em>Tự thêm từng tác vụ</em></h3>
-      <p class="muted sm">Khi bấm <b>+</b> mà chỉ thấy "Thêm các tác vụ ở bên dưới". Gõ tên tác vụ vào ô <b>Tìm kiếm</b> rồi chạm để thêm, lần lượt từ trên xuống:</p>
+    <section class="way" data-way-body="1">
+      <h3>Cách 1: <em>Thêm từng tác vụ</em></h3>
+      <p class="muted sm">Dùng được trên mọi iPhone. Mở app <b>Phím tắt</b> → bấm <b>+</b> → đổi tên thành <b class="hl">${SHORTCUT_NAME}</b>. Gõ tên từng tác vụ vào ô <b>Tìm kiếm tác vụ</b>, chạm để thêm, lần lượt từ trên xuống:</p>
       <ol class="guide">
-        <li><b>Tìm mẫu sức khỏe</b> → chạm chữ <b>Loại</b> chọn <b>Số bước</b> → bộ lọc <b>Ngày bắt đầu</b> chọn <b>là hôm nay</b>. Nếu có <b>Giới hạn</b> thì tắt.</li>
-        <li><b>Tính toán thống kê</b> → chạm chữ <b>Trung bình</b> đổi thành <b>Tổng</b>.</li>
-        <li><b>Làm tròn số</b> (để mặc định).</li>
-        <li><b>Văn bản</b> → dán <b>mẫu nội dung</b> (nút 1 bên dưới) → bấm đúp vào chữ <code>SO_BUOC</code> để chọn → trên bàn phím chọn biến <b>Số đã làm tròn</b> để thay vào.</li>
-        <li><b>Nhận nội dung của URL</b> → chạm chữ <b>URL</b> → dán <b>địa chỉ gửi</b> (nút 2) → chạm <b>›</b> để mở rộng:
-          <br>· <b>Phương thức</b>: <b>PATCH</b>
-          <br>· <b>Tiêu đề</b> → thêm 2 dòng: <code>Content-Type</code> = <code>application/json</code> và <code>Referer</code> = <code>https://harvefitness.github.io/</code>
-          <br>· <b>Nội dung yêu cầu</b>: <b>Tệp</b> → chạm ô <b>Tệp</b> chọn biến <b>Văn bản</b>.</li>
-        <li><b>Mở URL</b> → dán <b>địa chỉ quay lại app</b> (nút 3).</li>
-        <li>Bấm tên <b>Phím tắt mới</b> ở trên cùng → <b>Đổi tên</b> → <b class="hl">${SHORTCUT_NAME}</b> → bấm <b>▶</b> chạy thử.</li>
+        <li><b>Tìm mẫu sức khỏe</b> → chạm <b>Loại</b> chọn <b>Số bước</b> (Steps) → <b>Ngày bắt đầu</b> chọn <b>hôm nay</b> → <b>Giới hạn</b>: tắt.</li>
+        <li><b>Tính toán thống kê</b> → chạm chữ <b>Trung bình</b>, đổi thành <b>Tổng</b>. <small class="muted">(Để Trung bình là số bước bị sai.)</small></li>
+        <li><b>Làm tròn số</b> → để <b>Số nguyên</b>.</li>
+        <li><b>Văn bản</b> → dán nội dung ở nút ${S1} → bấm đúp chữ <code>SO_BUOC</code> → chọn biến <b>Số đã làm tròn</b> ở thanh trên bàn phím để thay vào.</li>
+        <li><b>Nhận nội dung của URL</b> → chạm <b>URL</b>, dán địa chỉ ở nút ${S2} → chạm <b>›</b> mở rộng → <b>Phương thức</b>: <b>PATCH</b> → <b>Nội dung yêu cầu</b>: <b>Tệp</b> → chạm ô Tệp, chọn biến <b>Văn bản</b>.</li>
+        <li><b>Mở URL</b> → chạm <b>URL</b>, dán địa chỉ ở nút ${S3} → ngay sau dấu <b>-</b> cuối, chọn biến <b>Số đã làm tròn</b>.</li>
+        <li>Bấm <b>▶</b> chạy thử. iPhone hỏi quyền thì chọn <b>Cho phép</b>. App HARVE Fitness mở lên và báo <b>"Đã nhận … bước"</b> là xong.</li>
       </ol>
-      <button class="ghost block" data-copy="json">1 · Sao chép mẫu nội dung</button>
-      <button class="ghost block" data-copy="api">2 · Sao chép địa chỉ gửi (mã riêng của bạn)</button>
-      <button class="ghost block" data-copy="app">3 · Sao chép địa chỉ quay lại app</button>
-      <div class="note"><b>Dùng hằng ngày:</b> bấm <b>Cập nhật từ Apple Health</b> → iPhone chạy phím tắt rồi tự quay lại web. Giờ cập nhật trên ô Bước chân là giờ bạn bấm.</div>
-      <div class="note"><b>Đã tạo phím tắt rồi, chỉ muốn tự quay lại app?</b> Mở phím tắt <b>${SHORTCUT_NAME}</b> → bấm <b>Sửa</b> → kéo xuống cuối → <b>Thêm tác vụ</b> → tìm <b>Mở URL</b> → gõ <code>${esc(appUrl)}</code> → <b>Xong</b>. Nếu có tác vụ <b>Hiển thị thông báo</b> ở cuối thì xóa đi.</div>
-      <button class="ghost block" data-copy="app">Sao chép địa chỉ ${esc(appUrl)}</button>
-      <div class="note"><b>Chạy thử bị lỗi?</b> Mở phím tắt, bấm <b>Sửa</b>, xem tác vụ <b>Nhận nội dung của URL</b>: Phương thức phải là <b>PATCH</b>, nội dung là <b>JSON</b> có <code>fields → steps / km / date → stringValue</code>. Không tự quay lại app: cần iOS 26 trở lên, và địa chỉ ở tác vụ <b>Mở URL</b> cuối phải bắt đầu bằng <code>webapp://</code>. Vẫn lỗi thì chụp màn hình gửi người quản lý web.</div>` : `<div class="note">Cần đăng nhập để tạo mã riêng của bạn.</div>`}
+      <button class="primary block" data-copy="json">1 · Sao chép nội dung Văn bản</button>
+      <button class="primary block" data-copy="api">2 · Sao chép địa chỉ gửi</button>
+      <button class="primary block" data-copy="open">3 · Sao chép địa chỉ mở app</button>
+      <div class="note"><b>Đã có phím tắt cũ?</b> Mở nó, bấm <b>Sửa</b>: đổi <b>Trung bình</b> → <b>Tổng</b>; xóa các tác vụ <b>URL</b>, <b>Mở URL</b>, <b>Dừng và tạo đầu ra</b> (bấm ⓧ); rồi thêm bước 4, 5, 6 ở trên.</div>
     </section>
 
     <section class="way" data-way-body="2" hidden>
-      <h3>Cách 2: <em>Gõ mô tả, mở qua Safari</em></h3>
-      <p class="muted sm">Giống Cách 3 nhưng mỗi lần chạy, số bước được gửi bằng cách mở web trong <b>Safari</b>.</p>
+      <h3>Cách 2: <em>Gõ mô tả</em></h3>
+      <p class="muted sm">Dùng khi bấm <b>+</b> trong app Phím tắt có ô <b>Mô tả phím tắt</b> (máy có Apple Intelligence).</p>
       <ol class="guide">
-        <li>Bấm nút <b>Sao chép mô tả</b> ở dưới.</li>
-        <li>Mở app <b>Phím tắt</b> → bấm <b>+</b> ở góc trên bên phải.</li>
-        <li>Bấm vào ô <b>Mô tả phím tắt</b> → dán → bấm <b>↵</b>.</li>
-        <li>Bấm vào tên phím tắt ở trên cùng → <b>Đổi tên</b> → gõ đúng <b class="hl">${SHORTCUT_NAME}</b>.</li>
-        <li>Bấm <b>▶</b> chạy thử → Safari mở web và báo <b>"Đã nhận … bước"</b>.</li>
+        <li>Bấm <b>Sao chép mô tả</b> ở dưới.</li>
+        <li>App <b>Phím tắt</b> → <b>+</b> → dán vào ô <b>Mô tả phím tắt</b> → <b>↵</b>.</li>
+        <li>Đổi tên thành <b class="hl">${SHORTCUT_NAME}</b> → bấm <b>▶</b> chạy thử.</li>
+        <li>Không ra: bấm <b>Sửa</b> và so với 6 tác vụ của Cách 1.</li>
       </ol>
-      ${askNote}${dupNote}
-      <div class="desc-box">${esc(desc)}</div>
+      <div class="desc-box">${esc(desc2)}</div>
       <button class="primary block" data-copy="desc">Sao chép mô tả</button>
-      <div class="note"><b>Chạy thử không ra?</b> Bấm <b>Sửa</b>, xem tác vụ <b>Mở URL</b> phải có dạng <code>…#health-</code> + số bước + dấu <b>-</b> + số km. Hoặc dùng Cách 1.</div>
     </section>
 
-    <section class="way" data-way-body="1" hidden>
-      <h3>Cách 1: <em>Tự thêm từng tác vụ</em></h3>
-      <p class="muted sm">Dùng khi bấm <b>+</b> mà <b>không có</b> ô "Mô tả phím tắt" (iOS cũ). Cũng mở qua Safari.</p>
-      <ol class="guide">
-        <li>Mở app <b>Phím tắt</b> → bấm <b>+</b> → đổi tên thành <b class="hl">${SHORTCUT_NAME}</b>.</li>
-        <li>Bấm <b>Thêm tác vụ</b> → tìm <b>Tìm mẫu sức khỏe</b> → chạm chữ <b>Loại</b> chọn <b>Số bước</b> → thêm bộ lọc <b>Ngày bắt đầu · là hôm nay</b>.</li>
-        <li>Thêm tác vụ <b>Tính toán thống kê</b> → chọn <b>Tổng</b>.</li>
-        <li>Thêm tác vụ <b>Làm tròn số</b>.</li>
-        <li>Thêm tác vụ <b>URL</b> → dán link (nút bên dưới) → chèn biến <b>Số đã làm tròn</b> ngay sau dấu gạch cuối.</li>
-        <li>Thêm tác vụ <b>Mở URL</b> → bấm <b>▶</b> chạy thử.</li>
-      </ol>
-      ${askNote}
-      <button class="primary block" data-copy="url">Sao chép link cho bước 5</button>
-      <div class="note">Muốn có thêm số km: lặp lại bước 2–4 với loại <b>Quãng đường đi bộ + chạy</b>, rồi ở bước 5 thêm dấu <b>-</b> và biến km phía sau. Ví dụ <code>…#health-8234-5,6</code>.</div>
-    </section>
-
-    <div class="note"><b>Tự động, khỏi bấm:</b> app Phím tắt → tab <b>Tự động hóa</b> → <b>+</b> → <b>Thời gian trong ngày</b> → chọn giờ (ví dụ 12:00, 18:00, 22:00; mỗi giờ tạo 1 lần) → <b>Chạy ngay</b> → chọn <b>${SHORTCUT_NAME}</b>. Với tự động hóa, nên xóa tác vụ <b>Mở URL</b> cuối trong 1 bản sao phím tắt để nó chạy ngầm, không bật app lên.</div>`);
+    <p class="muted sm">Mã trong địa chỉ gửi là của riêng bạn, đừng gửi cho người khác.</p>
+    <button class="ghost block" data-act="inbox-check">Kiểm tra: máy chủ đã nhận số bước chưa?</button>
+    <div class="note"><b>Dùng hằng ngày:</b> bấm <b>Cập nhật từ Apple Health</b> trên web → phím tắt chạy → app tự mở lại với số mới. Giờ cạnh chữ Apple Health là giờ bạn bấm.</div>
+    <div class="note"><b>Không tự mở lại app?</b> iPhone cần iOS 26 trở lên. Máy cũ hơn: chạy xong bấm <b>◀ HARVE Fitness</b> ở góc trên bên trái, số bước vẫn được cập nhật.</div>
+    <div class="note"><b>Tự động, khỏi bấm:</b> Phím tắt → tab <b>Tự động hóa</b> → <b>+</b> → <b>Thời gian trong ngày</b> (vd 12:00, 18:00, 22:00) → <b>Chạy ngay</b> → chọn <b>${SHORTCUT_NAME}</b>.</div>` : `<div class="note">Cần đăng nhập để tạo mã riêng của bạn.</div>`}`);
   body.addEventListener("click", async (e) => {
     const w = e.target.closest("[data-way]");
     if (w) {
@@ -306,12 +265,22 @@ export async function openGuide() {
       body.querySelectorAll("[data-way-body]").forEach((s) => (s.hidden = s.dataset.wayBody !== w.dataset.way));
       return;
     }
+    if (e.target.closest("[data-act=inbox-check]")) {
+      try {
+        const d = await S.getInbox(key);
+        const n = d ? parseLocaleNumber(d.steps, "thousands") : null;
+        toast(n != null ? `Máy chủ đã nhận: ${fmt(n)} bước. Phím tắt chạy đúng ✓` : "Máy chủ chưa nhận được số bước nào. Kiểm tra lại bước 4 và 5.", n != null ? "good" : "bad");
+      } catch (err) {
+        toast("Không kiểm tra được: " + (err?.code || err?.message), "bad");
+      }
+      return;
+    }
     const c = e.target.closest("[data-copy]");
     if (!c) return;
-    const text = { url, desc3, desc, app: appUrl, api, json: JSON_TPL }[c.dataset.copy] || desc;
+    const text = { json: JSON_TPL, api, open: openUrl, desc: desc2 }[c.dataset.copy];
     try {
       await navigator.clipboard.writeText(text);
-      c.textContent = "Đã sao chép ✓";
+      c.innerHTML = "Đã sao chép ✓";
     } catch {
       toast("Không sao chép được, hãy bấm giữ vào đoạn chữ để chọn và sao chép.", "bad");
     }
