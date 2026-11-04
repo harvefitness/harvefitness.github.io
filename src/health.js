@@ -80,6 +80,7 @@ export async function pullInbox() {
 }
 
 export const SHORTCUT_NAME = "DNT Health";
+const JSON_TPL = '{"fields":{"steps":{"stringValue":"SO_BUOC"}}}';
 const siteUrl = () => location.href.split("#")[0];
 // iOS 26+: "webapp://<site>" opens the home-screen web app (https:// would open Safari).
 const appReturnUrl = () => siteUrl().replace(/^https?:\/\//, "webapp://") + "#home";
@@ -242,6 +243,23 @@ export async function openGuide() {
       <div class="desc-box">${esc(desc3)}</div>
       <button class="primary block" data-copy="desc3">Sao chép mô tả</button>
       <p class="muted sm">Đoạn mô tả có <b>mã riêng của bạn</b>, đừng gửi cho người khác.</p>
+      <h3 class="push-h">Không có ô Mô tả? <em>Tự thêm từng tác vụ</em></h3>
+      <p class="muted sm">Khi bấm <b>+</b> mà chỉ thấy "Thêm các tác vụ ở bên dưới". Gõ tên tác vụ vào ô <b>Tìm kiếm</b> rồi chạm để thêm, lần lượt từ trên xuống:</p>
+      <ol class="guide">
+        <li><b>Tìm mẫu sức khỏe</b> → chạm chữ <b>Loại</b> chọn <b>Số bước</b> → bộ lọc <b>Ngày bắt đầu</b> chọn <b>là hôm nay</b>. Nếu có <b>Giới hạn</b> thì tắt.</li>
+        <li><b>Tính toán thống kê</b> → chạm chữ <b>Trung bình</b> đổi thành <b>Tổng</b>.</li>
+        <li><b>Làm tròn số</b> (để mặc định).</li>
+        <li><b>Văn bản</b> → dán <b>mẫu nội dung</b> (nút 1 bên dưới) → bấm đúp vào chữ <code>SO_BUOC</code> để chọn → trên bàn phím chọn biến <b>Số đã làm tròn</b> để thay vào.</li>
+        <li><b>Nhận nội dung của URL</b> → chạm chữ <b>URL</b> → dán <b>địa chỉ gửi</b> (nút 2) → chạm <b>›</b> để mở rộng:
+          <br>· <b>Phương thức</b>: <b>PATCH</b>
+          <br>· <b>Tiêu đề</b> → thêm 2 dòng: <code>Content-Type</code> = <code>application/json</code> và <code>Referer</code> = <code>https://harvefitness.github.io/</code>
+          <br>· <b>Nội dung yêu cầu</b>: <b>Tệp</b> → chạm ô <b>Tệp</b> chọn biến <b>Văn bản</b>.</li>
+        <li><b>Mở URL</b> → dán <b>địa chỉ quay lại app</b> (nút 3).</li>
+        <li>Bấm tên <b>Phím tắt mới</b> ở trên cùng → <b>Đổi tên</b> → <b class="hl">${SHORTCUT_NAME}</b> → bấm <b>▶</b> chạy thử.</li>
+      </ol>
+      <button class="ghost block" data-copy="json">1 · Sao chép mẫu nội dung</button>
+      <button class="ghost block" data-copy="api">2 · Sao chép địa chỉ gửi (mã riêng của bạn)</button>
+      <button class="ghost block" data-copy="app">3 · Sao chép địa chỉ quay lại app</button>
       <div class="note"><b>Dùng hằng ngày:</b> bấm <b>Cập nhật từ Apple Health</b> → iPhone chạy phím tắt rồi tự quay lại web. Giờ cập nhật trên ô Bước chân là giờ bạn bấm.</div>
       <div class="note"><b>Đã tạo phím tắt rồi, chỉ muốn tự quay lại app?</b> Mở phím tắt <b>${SHORTCUT_NAME}</b> → bấm <b>Sửa</b> → kéo xuống cuối → <b>Thêm tác vụ</b> → tìm <b>Mở URL</b> → gõ <code>${esc(appUrl)}</code> → <b>Xong</b>. Nếu có tác vụ <b>Hiển thị thông báo</b> ở cuối thì xóa đi.</div>
       <button class="ghost block" data-copy="app">Sao chép địa chỉ ${esc(appUrl)}</button>
@@ -290,7 +308,7 @@ export async function openGuide() {
     }
     const c = e.target.closest("[data-copy]");
     if (!c) return;
-    const text = { url, desc3, desc, app: appUrl }[c.dataset.copy] || desc;
+    const text = { url, desc3, desc, app: appUrl, api, json: JSON_TPL }[c.dataset.copy] || desc;
     try {
       await navigator.clipboard.writeText(text);
       c.textContent = "Đã sao chép ✓";
