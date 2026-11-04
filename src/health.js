@@ -124,7 +124,7 @@ async function diagnose(tap, rerender) {
         ? `Máy chủ đang có <b>${fmt(srvSteps)} bước</b> nhưng không phải lần vừa bấm. Kiểm tra tác vụ <b>Lấy nội dung của URL</b> (xem Cách kết nối).`
         : `Máy chủ <b>chưa nhận được</b> số bước nào. Tác vụ <b>Lấy nội dung của URL</b> phải là: địa chỉ ở nút 1 + biến <b>Đầu vào phím tắt</b> + <code>?documentId=</code> + biến <b>Số được làm tròn</b>, Phương thức <b>POST</b>, không có Nội dung yêu cầu.`
     }</p></div>
-    <p class="muted sm">Cũng kiểm tra tác vụ <b>Tính</b> phải là <b>Tổng</b>, không phải Trung bình. Chụp màn hình này cùng phím tắt (bấm Sửa) gửi người quản lý web nếu vẫn chưa được.</p>
+    <p class="muted sm">Cũng kiểm tra: <b>Tìm mẫu sức khỏe</b> có <b>Nhóm theo: Ngày</b> và tắt Giới hạn; tác vụ <b>Tính</b> là <b>Tổng</b>. Chụp màn hình này cùng phím tắt (bấm Sửa) gửi người quản lý web nếu vẫn chưa được.</p>
     <button class="primary block" data-act="diag-guide">Xem cách kết nối</button>
     <button class="ghost block" data-act="diag-manual">Nhập tay số bước</button>`);
   body.querySelector("[data-act=diag-guide]").onclick = () => openGuide();
@@ -310,11 +310,11 @@ export async function openGuide() {
   const apiBase = `${FS()}/inbox/`; // + "Đầu vào phím tắt" + "?documentId=" + "Số được làm tròn"
   const openUrl = webappUrl("#health-"); // + "Số được làm tròn"
   const link = cfg.shortcutLink || "";
-  const desc2 = `Tạo phím tắt có đúng 5 tác vụ theo thứ tự, không thêm tác vụ nào khác (không tạo Văn bản, không tạo Từ điển): 1) Tìm mẫu sức khỏe loại Số bước, ngày bắt đầu là hôm nay, tắt giới hạn. 2) Tính toán thống kê TỔNG (không phải trung bình) của các mẫu đó. 3) Làm tròn số thành số nguyên. 4) Lấy nội dung của URL, phương thức POST, không có tiêu đề và không có nội dung yêu cầu, URL là: ${apiBase}[Đầu vào phím tắt]?documentId=[Số được làm tròn] . 5) Mở URL: ${openUrl}[Số được làm tròn]`;
+  const desc2 = `Tạo phím tắt có đúng 5 tác vụ theo thứ tự, không thêm tác vụ nào khác (không tạo Văn bản, không tạo Từ điển): 1) Tìm mẫu sức khỏe loại Số bước, ngày bắt đầu là hôm nay, nhóm theo Ngày, tắt giới hạn. 2) Tính toán thống kê TỔNG (không phải trung bình) của các mẫu đó. 3) Làm tròn số thành số nguyên. 4) Lấy nội dung của URL, phương thức POST, không có tiêu đề và không có nội dung yêu cầu, URL là: ${apiBase}[Đầu vào phím tắt]?documentId=[Số được làm tròn] . 5) Mở URL: ${openUrl}[Số được làm tròn]`;
   const flow = `<div class="note"><b>Cách dùng:</b> bấm <b>Cập nhật từ Apple Health</b> → iPhone chuyển sang Phím tắt, chạy 1–2 giây → tự mở lại <b>HARVE Fitness</b> với số bước mới. Lần đầu iPhone hỏi quyền: <b>Cho phép</b> Sức khỏe, <b>Luôn cho phép</b> kết nối, <b>Mở</b> HARVE Fitness.</div>`;
   const B = (n) => `<b class="badge">${n}</b>`;
   const steps5 = `<ol class="guide">
-        <li><b>Tìm mẫu sức khỏe</b> → <b>Loại</b>: <b>Steps / Số bước</b> → <b>Ngày bắt đầu</b>: <b>hôm nay</b> → <b>Giới hạn</b>: tắt.</li>
+        <li><b>Tìm mẫu sức khỏe</b> → <b>Loại</b>: <b>Steps / Số bước</b> → <b>Ngày bắt đầu</b>: <b>hôm nay</b> → <b>Nhóm theo</b>: <b>Ngày</b> → <b>Giới hạn</b>: tắt. <small class="muted">(Nhóm theo Ngày để ra đúng tổng như app Sức khỏe; để "Không có" hoặc bật Giới hạn sẽ bị thiếu bước.)</small></li>
         <li><b>Tính toán thống kê</b> → chạm <b>Trung bình</b> đổi thành <b>Tổng</b>.</li>
         <li><b>Làm tròn số</b> → <b>Số nguyên</b>.</li>
         <li><b>Lấy nội dung của URL</b> → chạm ô địa chỉ, ghép đúng 4 phần liền nhau:
@@ -338,7 +338,7 @@ export async function openGuide() {
       <ol class="guide">
         <li>Bấm <b>Sao chép mô tả</b> ở dưới.</li>
         <li>App <b>Phím tắt</b> → <b>+</b> → chạm ô <b>Mô tả phím tắt</b> → dán → bấm <b>↵</b>. Chờ iPhone tạo xong.</li>
-        <li><b>Kiểm tra lại</b> (AI hay làm sai): bấm vào phím tắt, so với 5 tác vụ ở mục "Kiểm tra" bên dưới. Đặc biệt: <b>Tính</b> phải là <b>Tổng</b>; <b>Lấy nội dung của URL</b> phải là <b>POST</b> và <b>không có tác vụ Văn bản chứa chữ "fields"</b>. Sai chỗ nào sửa theo Cách 2.</li>
+        <li><b>Kiểm tra lại</b> (AI hay làm sai): bấm vào phím tắt, so với 5 tác vụ ở mục "Kiểm tra" bên dưới. Đặc biệt: <b>Nhóm theo</b> phải là <b>Ngày</b>; <b>Tính</b> phải là <b>Tổng</b>; <b>Lấy nội dung của URL</b> phải là <b>POST</b> và <b>không có tác vụ Văn bản chứa chữ "fields"</b>. Sai chỗ nào sửa theo Cách 2.</li>
         ${finish}
       </ol>
       <div class="desc-box">${esc(desc2)}</div>
