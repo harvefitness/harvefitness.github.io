@@ -4,7 +4,7 @@ import { A, recompute, loadRecent, aiContext, isTrainingDay, waterGoalCups, save
 import { startSetup, renderSetup } from "./v-setup.js";
 import { renderTrain, dayStatus, setTrainDate } from "./v-train.js";
 import { renderFood, snapBar, quickSnap } from "./v-food.js";
-import { stepsCard, stashIncoming, applyPending, openManual, openGuide, pullInbox, markTap, ensureInboxKey } from "./health.js";
+import { stepsCard, stashIncoming, applyPending, openManual, openGuide, syncHealth, diagnoseReturn, markTap, ensureInboxKey } from "./health.js";
 import { pushCard, openPushSettings, pushConfigured, refreshPush } from "./push.js";
 import { renderBody } from "./v-body.js";
 import { SPORTS, GOALS } from "./calc.js";
@@ -317,8 +317,11 @@ async function route() {
 }
 addEventListener("hashchange", route);
 // Back from the Shortcuts app (or reopened from the home screen): pick up new steps.
+const homeAgain = () => document.body.dataset.page === "home" && route();
 document.addEventListener("visibilitychange", () => {
-  if (document.visibilityState === "visible" && A.profile) pullInbox().then((changed) => changed && document.body.dataset.page === "home" && route());
+  if (document.visibilityState !== "visible" || !A.profile) return;
+  syncHealth().then((changed) => changed && homeAgain());
+  diagnoseReturn(homeAgain);
 });
 
 // ---------------------------------------------------------------- Boot
@@ -338,7 +341,8 @@ S.initStore(async (user, reason) => {
       await Promise.all([loadRecent(), ensureInboxKey().catch(() => null)]);
       applyPending();
       refreshPush();
-      pullInbox().then((changed) => changed && document.body.dataset.page === "home" && route());
+      syncHealth().then((changed) => changed && document.body.dataset.page === "home" && route());
+      diagnoseReturn(() => document.body.dataset.page === "home" && route());
     }
   } catch (e) {
     console.error(e);

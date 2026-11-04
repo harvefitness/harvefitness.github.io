@@ -42,11 +42,80 @@ function normDate(v) {
 /** Remember when "Cập nhật từ Apple Health" was tapped: that time is shown on the steps card. */
 export function markTap() {
   ls.set("dnt_health_tap", String(Date.now()));
+  ls.set("dnt_health_diag", String(Date.now())); // check what arrived when the app comes back
 }
 function takeTap() {
   const t = +ls.get("dnt_health_tap") || 0;
   ls.del("dnt_health_tap");
   return Date.now() - t < 15 * 60e3 ? t : 0; // tapped in the last 15 minutes
+}
+
+/** Today's reading saved elsewhere (Safari, another phone) → show it without a reload. */
+async function refreshToday() {
+  try {
+    const d = today();
+    const s = await S.get("health", d);
+    if (s?.steps != null && (s.at || 0) > (A.health[d]?.at || 0)) {
+      A.health[d] = s;
+      return true;
+    }
+  } catch {}
+  return false;
+}
+/** Everything that can bring new steps: the shortcut's inbox and the database. */
+export async function syncHealth() {
+  const [a, b] = await Promise.all([pullInbox(), refreshToday()]);
+  return a || b;
+}
+
+/** After "Cập nhật": if nothing arrived, explain exactly which part of the shortcut failed. */
+let diagRunning = false;
+export async function diagnoseReturn(rerender) {
+  const tap = +ls.get("dnt_health_diag") || 0;
+  if (!tap || Date.now() - tap > 10 * 60e3 || diagRunning) return;
+  diagRunning = true;
+  try {
+    await diagnose(tap, rerender);
+  } finally {
+    diagRunning = false;
+  }
+}
+async function diagnose(tap, rerender) {
+  await new Promise((r) => setTimeout(r, 3500)); // the #health link / inbox may arrive a moment later
+  if (+ls.get("dnt_health_diag") !== tap) return;
+  if (await syncHealth()) rerender?.();
+  let seen = null;
+  try {
+    seen = JSON.parse(ls.get("dnt_health_seen") || "null");
+  } catch {}
+  const opened = seen && seen.at >= tap;
+  const h = A.health[today()];
+  ls.del("dnt_health_diag");
+  // Received ✓ — unless the shortcut reopened the app with a link that had no number in it.
+  if (h && (h.at || 0) >= tap - 5000 && !(opened && !seen.ok)) return;
+  let srv = null;
+  try {
+    const key = await getInboxKey();
+    srv = key ? await S.getInbox(key) : null;
+  } catch {}
+  const srvSteps = srv ? parseLocaleNumber(srv.steps, "thousands") : null;
+  const body = openSheet(`<h2>Chưa nhận được <em>số bước.</em></h2>
+    <p class="muted">Web đã kiểm tra 2 đường phím tắt gửi số bước về:</p>
+    <div class="diag"><b>${opened ? "⚠️" : "✗"} Mở lại app kèm số bước</b><p>${
+      opened
+        ? `Phím tắt có mở lại app nhưng <b>không kèm số bước</b> (nhận được: <code>${esc(seen.raw)}</code>). Trong tác vụ <b>Mở URL</b>, ngay sau dấu <b>-</b> cuối phải có biến <b>Số đã làm tròn</b>.`
+        : `Phím tắt <b>không mở lại app</b> kèm số bước. Kiểm tra: tên phím tắt đúng <b>${SHORTCUT_NAME}</b>; tác vụ cuối là <b>Mở URL</b> với địa chỉ bắt đầu bằng <code>webapp://</code> (không phải https://); iPhone đã lên iOS 26.`
+    }</p></div>
+    <div class="diag"><b>${srvSteps != null ? "⚠️" : "✗"} Gửi lên máy chủ</b><p>${
+      srvSteps != null
+        ? `Máy chủ đang có <b>${fmt(srvSteps)} bước</b> nhưng không phải lần vừa bấm. Tác vụ <b>Nhận nội dung của URL</b> có thể chưa chạy, hoặc thiếu biến <b>Đầu vào phím tắt</b> ở cuối địa chỉ.`
+        : `Máy chủ <b>chưa nhận được</b> số bước nào. Kiểm tra tác vụ <b>Nhận nội dung của URL</b>: cuối địa chỉ có biến <b>Đầu vào phím tắt</b>, Phương thức <b>PATCH</b>, Nội dung yêu cầu <b>Tệp</b> = <b>Văn bản</b>.`
+    }</p></div>
+    <p class="muted sm">Cũng kiểm tra tác vụ <b>Tính toán thống kê</b> phải là <b>Tổng</b>, không phải Trung bình. Chụp màn hình này cùng phím tắt (bấm Sửa) gửi người quản lý web nếu vẫn chưa được.</p>
+    <button class="primary block" data-act="diag-guide">Xem cách kết nối</button>
+    <button class="ghost block" data-act="diag-manual">Nhập tay số bước</button>`);
+  body.querySelector("[data-act=diag-guide]").onclick = () => openGuide();
+  body.querySelector("[data-act=diag-manual]").onclick = () => openManual(rerender);
 }
 
 /** Read the inbox; save a new reading. Returns true when something changed (re-render home). */
@@ -145,7 +214,11 @@ export function parseHealthHash(hash = location.hash) {
 /** Remember an incoming reading until the person is signed in. */
 export function stashIncoming() {
   const h = parseHealthHash();
-  if (!h) return false;
+  if (/^#\/?health/i.test(location.hash)) ls.set("dnt_health_seen", JSON.stringify({ at: Date.now(), raw: decodeURIComponent(location.hash).slice(0, 80), ok: !!h }));
+  if (!h) {
+    if (/^#\/?health/i.test(location.hash)) history.replaceState(null, "", siteUrl() + "#home");
+    return false;
+  }
   ls.set("dnt_health_pending", JSON.stringify({ ...h, date: today() }));
   history.replaceState(null, "", siteUrl() + "#home");
   return true;
@@ -172,6 +245,9 @@ export const stepGoal = () => (A.profile?.goal === "cut" && A.profile?.cutPlan?.
 /** Rough kcal burned by walking: ~0.5 kcal per kg per 1.000 steps. */
 export const stepKcal = (steps) => Math.round((steps / 1000) * 0.5 * (+A.profile?.weight || 60));
 
+/** Distance from steps when Apple Health did not send km: stride ≈ 41,4 % of height. */
+const estKm = (steps) => (steps * (+A.profile?.height || 165) * 0.414) / 100000;
+
 export function stepsCard() {
   const d = today();
   const stored = A.health[d];
@@ -183,7 +259,7 @@ export function stepsCard() {
   const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent);
   return `<section class="card steps-card">
     <div class="row between"><span class="eyebrow">Bước chân hôm nay</span>${h?.at ? `<span class="muted sm">${h.source === "apple" ? "Apple Health" : "Nhập tay"} · ${new Date(h.at).toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })}</span>` : ""}</div>
-    <div class="steps-row"><b class="steps-big">${fmt(steps)}</b><span class="muted">/ ${fmt(goal)} bước${h?.km ? ` · ${fmt(h.km, 1)} km` : ""}${steps ? ` · ~${fmt(stepKcal(steps))} kcal` : ""}</span></div>
+    <div class="steps-row"><b class="steps-big">${fmt(steps)}</b><span class="muted">/ ${fmt(goal)} bước${h?.km ? ` · ${fmt(h.km, 1)} km` : steps ? ` · ≈${fmt(estKm(steps), 1)} km` : ""}${steps ? ` · ~${fmt(stepKcal(steps))} kcal` : ""}</span></div>
     ${bar((steps / goal) * 100)}
     <div class="spark" aria-label="Bước chân 7 ngày">${week.map((w) => `<span title="${shortDate(w.d)}: ${fmt(w.s)} bước" style="--h:${Math.max(4, (w.s / max) * 100)}%" class="${w.s >= goal ? "hit" : ""}${w.d === d ? " now" : ""}"></span>`).join("")}</div>
     <div class="row gap wrap">

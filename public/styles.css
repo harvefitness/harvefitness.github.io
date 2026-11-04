@@ -651,3 +651,6 @@ details.way-adv > * + * { margin-top: 10px; }
 .cut-hero h2 { font-size: clamp(34px, 11vw, 52px); }
 .cut-table td:last-child, .cut-table th { white-space: normal; }
 @media (max-width: 360px) { .cut-table { font-size: 12px; } .cut-table td, .cut-table th { padding-inline: 3px; } }
+.diag { background: var(--sunk); border-radius: 14px; padding: 12px 14px; display: grid; gap: 4px; }
+.diag p { margin: 0; font-size: 13.5px; color: var(--chrome); }
+.diag code { overflow-wrap: anywhere; }
