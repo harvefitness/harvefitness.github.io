@@ -21,7 +21,7 @@ window.APP_CONFIG = {
   appCheck: { provider: "v3", siteKey: "" },
 
   // Nhắc nhở qua thông báo (Firebase Cloud Messaging). Dán "Key pair" (Web Push certificates). Để trống = tắt.
-  push: { vapidKey: "" },
+  push: { vapidKey: "BJEewPrCTehsmIYOjsD5MS-_Ucd8rIRstB-F37u1K7CmlJM_jPv8fZ89KjEM6QqfsDVnSeIVy5RTaqZvISzByKY" },
 
   // Chỉ cho các email này đăng nhập. Để trống [] = ai có tài khoản Google cũng vào được
   // (dữ liệu vẫn riêng từng người). VD: ["ban@gmail.com", "banbe@gmail.com"]
