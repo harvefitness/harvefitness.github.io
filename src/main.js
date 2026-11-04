@@ -4,7 +4,7 @@ import { A, recompute, loadRecent, aiContext, isTrainingDay, waterGoalCups, save
 import { startSetup, renderSetup } from "./v-setup.js";
 import { renderTrain, dayStatus, setTrainDate } from "./v-train.js";
 import { renderFood, snapBar, quickSnap } from "./v-food.js";
-import { stepsCard, stashIncoming, applyPending, openManual, openGuide, pullInbox } from "./health.js";
+import { stepsCard, stashIncoming, applyPending, openManual, openGuide, pullInbox, markTap } from "./health.js";
 import { pushCard, openPushSettings, pushConfigured, refreshPush } from "./push.js";
 import { renderBody } from "./v-body.js";
 import { SPORTS, GOALS } from "./calc.js";
@@ -168,6 +168,7 @@ function renderHome(root) {
     if (e.target.closest("[data-today]")) setTrainDate(today());
     const snap = e.target.closest("[data-act=snap-photo], [data-act=snap-voice]");
     if (snap) return quickSnap(snap.dataset.act === "snap-photo" ? "photo" : "voice", d, () => renderHome(root));
+    if (e.target.closest("[data-act=health-run]")) markTap(); // the link itself opens the shortcut
     if (e.target.closest("[data-act=health-manual]")) return openManual(() => renderHome(root));
     if (e.target.closest("[data-act=push-open]")) return openPushSettings(() => renderHome(root));
     if (e.target.closest("[data-act=health-guide]")) return openGuide();

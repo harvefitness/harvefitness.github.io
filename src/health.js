@@ -37,6 +37,16 @@ function normDate(v) {
   return d <= t && d >= addDays(t, -3) ? d : null;
 }
 
+/** Remember when "Cập nhật từ Apple Health" was tapped: that time is shown on the steps card. */
+export function markTap() {
+  ls.set("dnt_health_tap", String(Date.now()));
+}
+function takeTap() {
+  const t = +ls.get("dnt_health_tap") || 0;
+  ls.del("dnt_health_tap");
+  return Date.now() - t < 15 * 60e3 ? t : 0; // tapped in the last 15 minutes
+}
+
 /** Read the inbox; save a new reading. Returns true when something changed (re-render home). */
 export async function pullInbox() {
   try {
@@ -44,15 +54,23 @@ export async function pullInbox() {
     if (!key) return false;
     const d = await S.getInbox(key);
     if (!d) return false;
+    const tap = takeTap();
     const sig = JSON.stringify([d.date, d.steps, d.km]);
-    if (ls.get("dnt_inbox_sig") === sig) return false;
+    if (ls.get("dnt_inbox_sig") === sig && !tap) return false;
     ls.set("dnt_inbox_sig", sig);
     const date = normDate(d.date);
     const r = sanitizeReading(parseLocaleNumber(d.steps, "thousands"), parseLocaleNumber(d.km, "decimal"));
     if (!date || r.steps == null) return false;
     const cur = A.health[date];
-    if (cur && cur.steps === r.steps && (cur.km ?? null) === r.km) return false;
-    saveSteps(date, r.steps, r.km, "apple", `inbox ${d.steps}|${d.km ?? ""}`.slice(0, 120));
+    if (cur && cur.steps === r.steps && (cur.km ?? null) === r.km) {
+      if (!tap || date !== today()) return false;
+      cur.at = tap; // same numbers (did not walk): still show the time of this update
+      cur.source = "apple";
+      saveLater("health", date, () => A.health[date], 0);
+      toast(`Đã cập nhật: vẫn ${fmt(r.steps)} bước.`, "good");
+      return true;
+    }
+    saveSteps(date, r.steps, r.km, "apple", `inbox ${d.steps}|${d.km ?? ""}`.slice(0, 120), tap || undefined);
     toast(`Đã nhận ${fmt(r.steps)} bước${r.km ? ` · ${fmt(r.km, 1)} km` : ""} từ Apple Health.`, "good");
     return true;
   } catch (e) {
@@ -134,12 +152,12 @@ export function applyPending() {
   } catch {}
   if (!p) return;
   ls.del("dnt_health_pending");
-  saveSteps(p.date, p.steps, p.km, "apple", p.raw);
+  saveSteps(p.date, p.steps, p.km, "apple", p.raw, takeTap() || undefined);
   toast(`Đã nhận ${fmt(p.steps)} bước${p.km ? ` · ${fmt(p.km, 1)} km` : ""} từ Apple Health.`, "good");
 }
 
-export function saveSteps(date, steps, km, source = "manual", raw = "") {
-  A.health[date] = { date, steps, km: km ?? null, source, at: Date.now(), ...(raw ? { raw } : {}) };
+export function saveSteps(date, steps, km, source = "manual", raw = "", at = Date.now()) {
+  A.health[date] = { date, steps, km: km ?? null, source, at, ...(raw ? { raw } : {}) };
   saveLater("health", date, () => A.health[date], 0);
 }
 
@@ -194,7 +212,8 @@ export async function openGuide() {
   const url = `${siteUrl()}#health-`;
   const key = await getInboxKey(true).catch(() => null);
   const api = key ? inboxUrl(key) : "";
-  const desc3 = `Tìm TẤT CẢ mẫu sức khỏe loại Số bước có ngày bắt đầu là hôm nay (không giới hạn số lượng), Tính toán thống kê TỔNG, làm tròn thành số nguyên. Tìm TẤT CẢ mẫu loại Quãng đường đi bộ + chạy của hôm nay, tính TỔNG, đổi sang km, làm tròn 2 chữ số thập phân. Lấy Ngày hiện tại, định dạng tùy chỉnh yyyy-MM-dd. Sau đó dùng tác vụ Nhận nội dung của URL với URL: ${api} , Phương thức PATCH, Tiêu đề: Content-Type = application/json và Referer = https://harvefitness.github.io/ , Nội dung yêu cầu JSON có 1 khóa "fields" là Từ điển gồm 3 khóa: "steps" là Từ điển có khóa "stringValue" = tổng số bước (dạng Văn bản); "km" là Từ điển có khóa "stringValue" = tổng km (dạng Văn bản); "date" là Từ điển có khóa "stringValue" = ngày đã định dạng (dạng Văn bản). KHÔNG mở URL, KHÔNG mở Safari. Cuối cùng Hiển thị thông báo: Đã gửi [tổng số bước] bước lên HARVE Fitness.`;
+  const appUrl = siteUrl().replace(/^https?:\/\//, "webapp://");
+  const desc3 = `Tìm TẤT CẢ mẫu sức khỏe loại Số bước có ngày bắt đầu là hôm nay (không giới hạn số lượng), Tính toán thống kê TỔNG, làm tròn thành số nguyên. Tìm TẤT CẢ mẫu loại Quãng đường đi bộ + chạy của hôm nay, tính TỔNG, đổi sang km, làm tròn 2 chữ số thập phân. Lấy Ngày hiện tại, định dạng tùy chỉnh yyyy-MM-dd. Sau đó dùng tác vụ Nhận nội dung của URL với URL: ${api} , Phương thức PATCH, Tiêu đề: Content-Type = application/json và Referer = https://harvefitness.github.io/ , Nội dung yêu cầu JSON có 1 khóa "fields" là Từ điển gồm 3 khóa: "steps" là Từ điển có khóa "stringValue" = tổng số bước (dạng Văn bản); "km" là Từ điển có khóa "stringValue" = tổng km (dạng Văn bản); "date" là Từ điển có khóa "stringValue" = ngày đã định dạng (dạng Văn bản). KHÔNG mở Safari. Cuối cùng thêm tác vụ Mở URL với đúng địa chỉ: ${appUrl} (để quay lại app HARVE Fitness trên màn hình chính).`;
   const desc = `Tìm TẤT CẢ mẫu sức khỏe loại Số bước có ngày bắt đầu là hôm nay (không giới hạn số lượng), rồi Tính toán thống kê: TỔNG, làm tròn thành số nguyên không có dấu phân cách. Tìm TẤT CẢ mẫu loại Quãng đường đi bộ + chạy của hôm nay, tính TỔNG, đổi sang km, làm tròn 1 chữ số thập phân. Sau đó mở URL: ${url}[tổng số bước]-[tổng km]`;
   const askNote = `<p class="muted sm">Lần đầu chạy, iPhone hỏi quyền: chọn <b>Cho phép</b> cho <b>Số bước</b> và <b>Quãng đường đi bộ + chạy</b>.</p>`;
   const dupNote = `<p class="muted sm">Nếu iPhone báo đã có phím tắt trùng tên: quay ra danh sách phím tắt, bấm giữ <b>${SHORTCUT_NAME}</b> cũ → <b>Xóa</b>, rồi đổi tên lại.</p>`;
@@ -204,21 +223,23 @@ export async function openGuide() {
 
     <section class="way" data-way-body="3">
       <h3>Cách 3: <em>Gửi thẳng vào web</em></h3>
-      <p class="muted sm">Không mở Safari. Phím tắt gửi số bước lên web, bạn quay lại <b>HARVE Fitness</b> là thấy số mới.</p>
+      <p class="muted sm">Không mở Safari. Phím tắt gửi số bước lên web rồi tự quay lại app <b>HARVE Fitness</b> trên màn hình chính (iOS 26 trở lên).</p>
       ${key ? `<ol class="guide">
         <li>Bấm nút <b>Sao chép mô tả</b> ở dưới.</li>
         <li>Mở app <b>Phím tắt</b> → bấm <b>+</b> ở góc trên bên phải.</li>
         <li>Bấm vào ô <b>Mô tả phím tắt</b> → dán → bấm <b>↵</b>. Chờ iPhone tạo xong.</li>
         <li>Bấm vào tên phím tắt ở trên cùng → <b>Đổi tên</b> → gõ đúng <b class="hl">${SHORTCUT_NAME}</b>.</li>
         <li>Bấm <b>▶</b> để chạy thử. iPhone hỏi quyền: chọn <b>Cho phép</b> (Sức khỏe) và <b>Luôn cho phép</b> (kết nối tới firestore.googleapis.com).</li>
-        <li>Thấy thông báo <b>"Đã gửi … bước"</b> → mở lại <b>HARVE Fitness</b> → web báo <b>"Đã nhận … bước"</b>. Xong!</li>
+        <li>iPhone tự quay lại <b>HARVE Fitness</b> và web báo <b>"Đã nhận … bước"</b>. Xong!</li>
       </ol>
       ${dupNote}
       <div class="desc-box">${esc(desc3)}</div>
       <button class="primary block" data-copy="desc3">Sao chép mô tả</button>
       <p class="muted sm">Đoạn mô tả có <b>mã riêng của bạn</b>, đừng gửi cho người khác.</p>
-      <div class="note"><b>Dùng hằng ngày:</b> bấm <b>Cập nhật từ Apple Health</b> → iPhone mở Phím tắt và chạy → bấm <b>◀ HARVE Fitness</b> ở góc trên bên trái để quay lại web.</div>
-      <div class="note"><b>Chạy thử bị lỗi?</b> Mở phím tắt, bấm <b>Sửa</b>, xem tác vụ <b>Nhận nội dung của URL</b>: Phương thức phải là <b>PATCH</b>, nội dung là <b>JSON</b> có <code>fields → steps / km / date → stringValue</code>. Vẫn lỗi thì chụp màn hình gửi người quản lý web.</div>` : `<div class="note">Cần đăng nhập để tạo mã riêng của bạn.</div>`}
+      <div class="note"><b>Dùng hằng ngày:</b> bấm <b>Cập nhật từ Apple Health</b> → iPhone chạy phím tắt rồi tự quay lại web. Giờ cập nhật trên ô Bước chân là giờ bạn bấm.</div>
+      <div class="note"><b>Đã tạo phím tắt rồi, chỉ muốn tự quay lại app?</b> Mở phím tắt <b>${SHORTCUT_NAME}</b> → bấm <b>Sửa</b> → kéo xuống cuối → <b>Thêm tác vụ</b> → tìm <b>Mở URL</b> → gõ <code>${esc(appUrl)}</code> → <b>Xong</b>. Nếu có tác vụ <b>Hiển thị thông báo</b> ở cuối thì xóa đi.</div>
+      <button class="ghost block" data-copy="app">Sao chép địa chỉ ${esc(appUrl)}</button>
+      <div class="note"><b>Chạy thử bị lỗi?</b> Mở phím tắt, bấm <b>Sửa</b>, xem tác vụ <b>Nhận nội dung của URL</b>: Phương thức phải là <b>PATCH</b>, nội dung là <b>JSON</b> có <code>fields → steps / km / date → stringValue</code>. Không tự quay lại app: cần iOS 26 trở lên, và địa chỉ ở tác vụ <b>Mở URL</b> cuối phải bắt đầu bằng <code>webapp://</code>. Vẫn lỗi thì chụp màn hình gửi người quản lý web.</div>` : `<div class="note">Cần đăng nhập để tạo mã riêng của bạn.</div>`}
     </section>
 
     <section class="way" data-way-body="2" hidden>
@@ -253,7 +274,7 @@ export async function openGuide() {
       <div class="note">Muốn có thêm số km: lặp lại bước 2–4 với loại <b>Quãng đường đi bộ + chạy</b>, rồi ở bước 5 thêm dấu <b>-</b> và biến km phía sau. Ví dụ <code>…#health-8234-5,6</code>.</div>
     </section>
 
-    <div class="note"><b>Tự động, khỏi bấm:</b> app Phím tắt → tab <b>Tự động hóa</b> → <b>+</b> → <b>Thời gian trong ngày</b> → chọn giờ (ví dụ 12:00, 18:00, 22:00; mỗi giờ tạo 1 lần) → <b>Chạy ngay</b> → chọn <b>${SHORTCUT_NAME}</b>. Với Cách 3, phím tắt chạy ngầm, mở web là có số mới.</div>`);
+    <div class="note"><b>Tự động, khỏi bấm:</b> app Phím tắt → tab <b>Tự động hóa</b> → <b>+</b> → <b>Thời gian trong ngày</b> → chọn giờ (ví dụ 12:00, 18:00, 22:00; mỗi giờ tạo 1 lần) → <b>Chạy ngay</b> → chọn <b>${SHORTCUT_NAME}</b>. Với tự động hóa, nên xóa tác vụ <b>Mở URL</b> cuối trong 1 bản sao phím tắt để nó chạy ngầm, không bật app lên.</div>`);
   body.addEventListener("click", async (e) => {
     const w = e.target.closest("[data-way]");
     if (w) {
@@ -263,7 +284,7 @@ export async function openGuide() {
     }
     const c = e.target.closest("[data-copy]");
     if (!c) return;
-    const text = c.dataset.copy === "url" ? url : c.dataset.copy === "desc3" ? desc3 : desc;
+    const text = { url, desc3, desc, app: appUrl }[c.dataset.copy] || desc;
     try {
       await navigator.clipboard.writeText(text);
       c.textContent = "Đã sao chép ✓";
