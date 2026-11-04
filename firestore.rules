@@ -17,5 +17,12 @@ service cloud.firestore {
         && ok(request.resource.data.get('km', ''))
         && ok(request.resource.data.get('date', ''));
     }
+    // Phím tắt gửi số bước: tạo 1 tài liệu rỗng tên là số bước, trong ngăn của ngày: inbox/{mã}/d20261105/{6543}
+    match /inbox/{key}/{day}/{steps} {
+      allow get, list: if key.size() >= 24 && day.matches('d[0-9]{8}');
+      allow create: if key.size() >= 24 && day.matches('d[0-9]{8}') && steps.matches('[0-9]{1,6}')
+        && request.resource.data.size() == 0;
+      allow update, delete: if false;
+    }
   }
 }

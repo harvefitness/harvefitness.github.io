@@ -654,3 +654,4 @@ details.way-adv > * + * { margin-top: 10px; }
 .diag { background: var(--sunk); border-radius: 14px; padding: 12px 14px; display: grid; gap: 4px; }
 .diag p { margin: 0; font-size: 13.5px; color: var(--chrome); }
 .diag code { overflow-wrap: anywhere; }
+.badge { display: inline-grid; place-items: center; width: 20px; height: 20px; padding: 0; line-height: 1; border-radius: 50%; background: var(--accent); color: var(--accent-ink); font-size: 11px; font-weight: 800; margin-right: 2px; }
