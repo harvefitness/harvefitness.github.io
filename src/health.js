@@ -80,8 +80,14 @@ export async function pullInbox() {
 }
 
 export const SHORTCUT_NAME = "DNT Health";
-export const shortcutRunUrl = () => `shortcuts://run-shortcut?name=${encodeURIComponent(SHORTCUT_NAME)}`;
 const siteUrl = () => location.href.split("#")[0];
+// iOS 26+: "webapp://<site>" opens the home-screen web app (https:// would open Safari).
+const appReturnUrl = () => siteUrl().replace(/^https?:\/\//, "webapp://") + "#home";
+/** Run the shortcut; when it finishes (or fails / is cancelled) Shortcuts opens the web app again. */
+export const shortcutRunUrl = () => {
+  const back = encodeURIComponent(appReturnUrl());
+  return `shortcuts://x-callback-url/run-shortcut?name=${encodeURIComponent(SHORTCUT_NAME)}&x-success=${back}&x-cancel=${back}&x-error=${back}`;
+};
 
 
 /** "#health-8234-5,6" → { steps, km } or null */
@@ -212,7 +218,7 @@ export async function openGuide() {
   const url = `${siteUrl()}#health-`;
   const key = await getInboxKey(true).catch(() => null);
   const api = key ? inboxUrl(key) : "";
-  const appUrl = siteUrl().replace(/^https?:\/\//, "webapp://");
+  const appUrl = appReturnUrl();
   const desc3 = `Tìm TẤT CẢ mẫu sức khỏe loại Số bước có ngày bắt đầu là hôm nay (không giới hạn số lượng), Tính toán thống kê TỔNG, làm tròn thành số nguyên. Tìm TẤT CẢ mẫu loại Quãng đường đi bộ + chạy của hôm nay, tính TỔNG, đổi sang km, làm tròn 2 chữ số thập phân. Lấy Ngày hiện tại, định dạng tùy chỉnh yyyy-MM-dd. Sau đó dùng tác vụ Nhận nội dung của URL với URL: ${api} , Phương thức PATCH, Tiêu đề: Content-Type = application/json và Referer = https://harvefitness.github.io/ , Nội dung yêu cầu JSON có 1 khóa "fields" là Từ điển gồm 3 khóa: "steps" là Từ điển có khóa "stringValue" = tổng số bước (dạng Văn bản); "km" là Từ điển có khóa "stringValue" = tổng km (dạng Văn bản); "date" là Từ điển có khóa "stringValue" = ngày đã định dạng (dạng Văn bản). KHÔNG mở Safari. Cuối cùng thêm tác vụ Mở URL với đúng địa chỉ: ${appUrl} (để quay lại app HARVE Fitness trên màn hình chính).`;
   const desc = `Tìm TẤT CẢ mẫu sức khỏe loại Số bước có ngày bắt đầu là hôm nay (không giới hạn số lượng), rồi Tính toán thống kê: TỔNG, làm tròn thành số nguyên không có dấu phân cách. Tìm TẤT CẢ mẫu loại Quãng đường đi bộ + chạy của hôm nay, tính TỔNG, đổi sang km, làm tròn 1 chữ số thập phân. Sau đó mở URL: ${url}[tổng số bước]-[tổng km]`;
   const askNote = `<p class="muted sm">Lần đầu chạy, iPhone hỏi quyền: chọn <b>Cho phép</b> cho <b>Số bước</b> và <b>Quãng đường đi bộ + chạy</b>.</p>`;
