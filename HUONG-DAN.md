@@ -129,4 +129,10 @@ Cài 1 lần (khoảng 10 phút):
    - Secret: mở file `.json` bằng Ghi chú / TextEdit, chọn tất cả, dán vào → **Add secret**. Xong thì xóa file `.json` trong máy.
 3. **Bật trên iPhone**: Safari mở web → nút Chia sẻ → **Thêm vào MH chính** → mở web từ biểu tượng mới → menu → **Nhắc nhở** → **Bật nhắc nhở** → **Cho phép**. (Cần iOS 16.4 trở lên. Android/máy tính thì bật thẳng trên trình duyệt.)
 
-Kiểm tra: GitHub → tab **Actions** → **Nhắc nhở (push)** → **Run workflow**. Dòng cuối của lần chạy ghi "Đã kiểm tra X người bật nhắc nhở".
+Kiểm tra: GitHub → tab **Actions** → **Nhắc nhở (push)** → **Run workflow**. Dòng cuối của lần chạy ghi "Đã kiểm tra X người bật nhắc nhở". Gửi thử 1 thông báo: sửa file `.github/notify-test.txt` (gõ gì cũng được) rồi lưu, máy chủ gửi 1 tin thử đến các điện thoại vừa bật nhắc nhở trong 48 giờ qua.
+
+**Mỗi người tự chỉnh nhắc nhở** (trang chủ → ô *Nhắc nhở hôm nay* → **Chỉnh**, hoặc menu → **Nhắc nhở**):
+- *Theo lộ trình của bạn*: bật/tắt từng loại; chọn nhắc trước giờ tập bao lâu, kiểm tra nước mỗi mấy tiếng, nhắc đi ngủ, cân buổi sáng vào thứ mấy. Giờ tự tính theo giờ dậy, giờ tập, giờ ngủ, ngày tập, môn thể thao và tuần của lộ trình 12 tuần trong hồ sơ.
+- *Nhắc nhở riêng*: tự thêm, sửa, xóa (nội dung, giờ, lặp mỗi ngày / ngày tập gym / ngày tập & thể thao / ngày nghỉ / chọn thứ). Tối đa 20.
+- *Gợi ý cho bạn*: dựa trên hồ sơ (creatine, whey, mục tiêu, môn thể thao, công việc ngồi nhiều…), chạm để thêm.
+- *Hôm nay sẽ nhắc*: xem trước toàn bộ giờ nhắc trong ngày.
