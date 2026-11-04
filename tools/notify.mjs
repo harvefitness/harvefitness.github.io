@@ -179,7 +179,7 @@ for (const u of users.docs) {
       webpush: { headers: { Urgency: "high", TTL: "3600" } },
     });
     sentCount += res.successCount;
-    console.log(u.id.slice(0, 6), "test", `ok ${res.successCount}/${res.responses.length}`, res.responses.map((x) => x.error?.code || "").join(" "));
+    console.log(u.id.slice(0, 6), "test", `ok ${res.successCount}/${res.responses.length}`, res.responses.map((x) => (x.error ? `${x.error.code}: ${x.error.message}` : "")).join(" | "));
     continue;
   }
   const profile = u.data().profile;
