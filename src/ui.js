@@ -44,6 +44,14 @@ export function addDays(s, n) {
   d.setDate(d.getDate() + n);
   return ymd(d);
 }
+/** Colour theme by sex: women get hot pink, everyone else electric lime. Remembered for the next start. */
+export function applyTheme(sex) {
+  const pink = sex === "female";
+  document.documentElement.dataset.theme = pink ? "pink" : "lime";
+  try {
+    localStorage.setItem("dnt_theme", pink ? "pink" : "lime");
+  } catch {}
+}
 export const DOW = ["CN", "T2", "T3", "T4", "T5", "T6", "T7"];
 export const DOW_LONG = ["Chủ nhật", "Thứ 2", "Thứ 3", "Thứ 4", "Thứ 5", "Thứ 6", "Thứ 7"];
 export const WEEK_ORDER = [1, 2, 3, 4, 5, 6, 0]; // T2 → CN

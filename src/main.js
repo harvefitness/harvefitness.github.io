@@ -11,7 +11,7 @@ import { SPORTS, GOALS } from "./calc.js";
 import { planFor, phaseOf } from "./program.js";
 import { totals, mealPlan, itemView } from "./food.js";
 import * as AI from "./ai.js";
-import { esc, fmt, today, addDays, niceDate, mondayOf, DOW, WEEK_ORDER, hm, $, toast, md, bar, closeSheet } from "./ui.js";
+import { esc, fmt, today, addDays, niceDate, mondayOf, DOW, WEEK_ORDER, hm, $, toast, md, bar, closeSheet, applyTheme } from "./ui.js";
 
 const app = document.getElementById("app");
 const NAV = [
@@ -282,6 +282,7 @@ async function route() {
     return;
   }
   closeSheet();
+  if (page !== "setup" && A.profile) applyTheme(A.profile.sex);
   if (!$("#view")) shell();
   const view = $("#view");
   const key = page + "/" + sub;

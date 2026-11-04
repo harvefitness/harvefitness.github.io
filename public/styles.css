@@ -12,6 +12,8 @@
   --nav-h: 66px;
   color-scheme: dark;
 }
+/* Nữ: hồng kẹo ngọt (chọn giới tính Nữ trong hồ sơ). Nam: xanh chanh mặc định. */
+:root[data-theme="pink"] { --accent: #ff7ac6; --accent-soft: #3a1a2d; }
 
 * { box-sizing: border-box; }
 html { -webkit-text-size-adjust: 100%; background: var(--bg); }

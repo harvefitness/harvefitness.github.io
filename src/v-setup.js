@@ -4,7 +4,7 @@ import * as S from "./store.js";
 import { SPORTS, GOALS, JOBS, STEPS } from "./calc.js";
 import { LEVEL_OPTS, PLACES, FOCUS, INJURIES } from "./program.js";
 import { physiquesFor } from "./anatomy.js";
-import { esc, num, toast, today, DOW, WEEK_ORDER, $ } from "./ui.js";
+import { esc, num, toast, today, DOW, WEEK_ORDER, $, applyTheme } from "./ui.js";
 
 const STEPS_UI = ["Cơ bản", "Số đo", "Mục tiêu", "Tập luyện", "Sinh hoạt"];
 let step = 0;
@@ -145,6 +145,7 @@ export function renderSetup(root) {
         const arr = (draft[k] || []).map(String);
         draft[k] = arr.includes(v) ? arr.filter((x) => x !== v) : [...arr, v];
       } else draft[k] = k === "level" || k === "meals" ? +v : v;
+      if (k === "sex") applyTheme(v); // preview the colour right away
       return renderSetup(root);
     }
     if (b.dataset.days) {
