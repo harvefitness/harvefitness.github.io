@@ -5,6 +5,7 @@ import { startSetup, renderSetup } from "./v-setup.js";
 import { renderTrain, dayStatus, setTrainDate } from "./v-train.js";
 import { renderFood, snapBar, quickSnap } from "./v-food.js";
 import { stepsCard, stashIncoming, applyPending, openManual, openGuide } from "./health.js";
+import { pushCard, openPushSettings, pushConfigured, refreshPush } from "./push.js";
 import { renderBody } from "./v-body.js";
 import { SPORTS, GOALS } from "./calc.js";
 import { planFor, phaseOf } from "./program.js";
@@ -36,7 +37,7 @@ function shell() {
     const menu = document.createElement("div");
     menu.className = "menu";
     menu.innerHTML = `<p><b>${esc(A.user?.displayName || A.profile?.name || "")}</b><br><small class="muted">${esc(A.user?.email || "")}</small></p>
-      <a href="#setup">Sửa hồ sơ & thói quen</a><a href="#body">Đánh giá cơ thể</a><button id="logout">Đăng xuất</button>`;
+      <a href="#setup">Sửa hồ sơ & thói quen</a><a href="#body">Đánh giá cơ thể</a>${pushConfigured() ? `<button id="push-menu">Nhắc nhở</button>` : ""}<button id="logout">Đăng xuất</button>`;
     document.body.appendChild(menu);
     const close = (e) => {
       if (!menu.contains(e.target) || e.target.closest("a")) {
@@ -46,6 +47,8 @@ function shell() {
     };
     setTimeout(() => addEventListener("click", close, true));
     $("#logout", menu).onclick = () => S.signOut();
+    const pm = $("#push-menu", menu);
+    if (pm) pm.onclick = () => (menu.remove(), openPushSettings());
   };
 }
 
@@ -135,6 +138,7 @@ function renderHome(root) {
         <p class="hint">Chạm vào 1 ly mỗi khi bạn uống xong 1 cốc nước (250ml).</p>
       </div>
     </section>
+    <div id="push-slot"></div>
     ${stepsCard()}
     ${next ? `<section class="card"><div class="row between"><span class="eyebrow">Bữa tiếp theo · ${next.time}</span><a class="link" href="#food-plan">Cả ngày</a></div>
       <h3>${esc(next.label)}</h3><p class="muted">${next.items.filter((it) => it.id !== "creatine").map((it) => esc(foodName(it))).join(" · ")}</p></section>` : ""}
@@ -152,6 +156,10 @@ function renderHome(root) {
     <section class="quick"><span class="eyebrow">Hỏi nhanh PT</span>
       <div class="chips wrap">${["Hôm nay mình nên ăn gì trước buổi tập?", "Đau mỏi cơ sau tập thì làm gì?", "Làm sao để giảm mỡ bụng nhanh hơn?", "Mình có nên uống creatine không?"].map((q) => `<a class="chip" href="#chat" data-ask="${esc(q)}">${esc(q)}</a>`).join("")}</div>
     </section>`;
+  pushCard().then((html) => {
+    const slot = $("#push-slot", root);
+    if (slot) slot.outerHTML = html || "";
+  });
   root.onclick = (e) => {
     const ask = e.target.closest("[data-ask]");
     if (ask) sessionStorage.setItem("chat_ask", ask.dataset.ask);
@@ -161,6 +169,7 @@ function renderHome(root) {
     const snap = e.target.closest("[data-act=snap-photo], [data-act=snap-voice]");
     if (snap) return quickSnap(snap.dataset.act === "snap-photo" ? "photo" : "voice", d, () => renderHome(root));
     if (e.target.closest("[data-act=health-manual]")) return openManual(() => renderHome(root));
+    if (e.target.closest("[data-act=push-open]")) return openPushSettings(() => renderHome(root));
     if (e.target.closest("[data-act=health-guide]")) return openGuide();
     const cup = e.target.closest("[data-act=water]");
     if (cup) {
@@ -322,6 +331,7 @@ S.initStore(async (user, reason) => {
       recompute();
       await loadRecent();
       applyPending();
+      refreshPush();
     }
   } catch (e) {
     console.error(e);

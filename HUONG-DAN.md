@@ -113,3 +113,20 @@ Hướng dẫn có ngay trong web: **Trang chủ → thẻ "Bước chân hôm n
 - **Cách 2, gõ mô tả (iOS mới):** bấm **+** trong app Phím tắt, dán đoạn mô tả có sẵn trong web vào ô "Mô tả phím tắt", rồi đổi tên thành `DNT Health`.
 
 Phải làm trên **iPhone**, không làm trên Mac được vì số bước nằm trong app Sức khỏe của iPhone. Sau khi tạo phím tắt, nút **Cập nhật từ Apple Health** sẽ tự chạy phím tắt đó.
+
+## Nhắc nhở trên điện thoại (thông báo đẩy)
+
+Web tự gửi nhắc: giờ tập (trước 30 phút), PT nhắc tăng tạ buổi sáng, uống nước, ghi bữa ăn, chưa tập buổi tối. Không nhắc trong giờ ngủ. Miễn phí (Firebase Cloud Messaging + GitHub Actions, cứ 30 phút kiểm tra 1 lần).
+
+Cài 1 lần (khoảng 10 phút):
+
+1. **Lấy khóa thông báo (gửi cho Claude được, đây là khóa công khai)**
+   Firebase Console → ⚙️ Project settings → tab **Cloud Messaging** → kéo xuống **Web Push certificates** → bấm **Generate key pair** → copy dãy ký tự dài (bắt đầu bằng `B...`) gửi Claude. Claude dán vào `public/config.js` → `push.vapidKey`.
+2. **Cho "người đưa thư" quyền gửi (KHÔNG gửi file này cho ai, kể cả Claude)**
+   Firebase → ⚙️ Project settings → tab **Service accounts** → **Generate new private key** → tải về 1 file `.json`.
+   Mở GitHub repo `harvefitness/harvefitness.github.io` → **Settings** → **Secrets and variables** → **Actions** → **New repository secret**:
+   - Name: `FIREBASE_SERVICE_ACCOUNT`
+   - Secret: mở file `.json` bằng Ghi chú / TextEdit, chọn tất cả, dán vào → **Add secret**. Xong thì xóa file `.json` trong máy.
+3. **Bật trên iPhone**: Safari mở web → nút Chia sẻ → **Thêm vào MH chính** → mở web từ biểu tượng mới → menu → **Nhắc nhở** → **Bật nhắc nhở** → **Cho phép**. (Cần iOS 16.4 trở lên. Android/máy tính thì bật thẳng trên trình duyệt.)
+
+Kiểm tra: GitHub → tab **Actions** → **Nhắc nhở (push)** → **Run workflow**. Dòng cuối của lần chạy ghi "Đã kiểm tra X người bật nhắc nhở".

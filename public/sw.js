@@ -3,7 +3,7 @@
 // - Versioned / hashed files (app.js?v=…, chunks, 3D model, exercise data, icons): cache first.
 // - Exercise photos and Google Fonts: cached after the first view.
 // - Firebase / Gemini requests are never cached (personal data stays live).
-const CACHE = "dnt-harve-v1";
+const CACHE = "dnt-harve-v2";
 const IMG = "dnt-harve-img-v1";
 
 self.addEventListener("install", () => self.skipWaiting());
@@ -44,4 +44,40 @@ self.addEventListener("fetch", (e) => {
   if (url.hostname === "raw.githubusercontent.com" && url.pathname.includes("free-exercise-db")) return e.respondWith(cacheFirst(req, IMG));
   if (url.hostname === "fonts.googleapis.com" || url.hostname === "fonts.gstatic.com") return e.respondWith(cacheFirst(req));
   // everything else (Firebase, Gemini, Google sign-in) goes straight to the network
+});
+
+// ---- Push reminders (sent by tools/notify.mjs through Firebase Cloud Messaging) ----
+self.addEventListener("push", (e) => {
+  let p = {};
+  try {
+    p = e.data ? e.data.json() : {};
+  } catch {
+    p = { data: { body: e.data?.text() } };
+  }
+  const d = p.data || p.notification || {};
+  e.waitUntil(
+    self.registration.showNotification(d.title || "DNT & HARVE FITNESS", {
+      body: d.body || "",
+      icon: "icon-192.png",
+      badge: "icon-192.png",
+      tag: d.tag || undefined,
+      data: { url: d.url || "./#home" },
+    })
+  );
+});
+self.addEventListener("notificationclick", (e) => {
+  e.notification.close();
+  const url = new URL(e.notification.data?.url || "./#home", self.registration.scope).href;
+  e.waitUntil(
+    (async () => {
+      const wins = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
+      for (const w of wins) {
+        if (w.url.startsWith(self.registration.scope)) {
+          await w.focus();
+          return w.navigate(url);
+        }
+      }
+      return self.clients.openWindow(url);
+    })()
+  );
 });

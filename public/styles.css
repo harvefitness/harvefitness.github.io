@@ -591,3 +591,13 @@ code { font-family: ui-monospace, Menlo, monospace; font-size: 12.5px; backgroun
 .tip-apply { flex: none; border: 0; background: var(--accent); color: var(--accent-ink); border-radius: 999px; padding: 7px 12px; font-size: 11px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
 .coach-sum { border-color: color-mix(in srgb, var(--accent) 45%, var(--line)); }
 .coach-sum p { font-size: 14px; }
+
+/* ---------- Push reminders ---------- */
+.push-card { grid-template-columns: 1fr auto; align-items: center; }
+.push-card p { font-size: 13.5px; color: var(--chrome); margin-top: 4px; }
+.push-list { display: grid; border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; }
+.push-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 12px 14px; border-top: 1px solid var(--line); }
+.push-row:first-child { border-top: 0; }
+.push-row span { display: grid; gap: 2px; }
+.push-row small { color: var(--muted); font-size: 12px; }
+.push-row input { width: 24px; height: 24px; accent-color: var(--accent); flex: none; }

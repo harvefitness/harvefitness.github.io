@@ -20,6 +20,9 @@ window.APP_CONFIG = {
   // provider: "v3" (reCAPTCHA v3) hoặc "enterprise" (reCAPTCHA Enterprise).
   appCheck: { provider: "v3", siteKey: "" },
 
+  // Nhắc nhở qua thông báo (Firebase Cloud Messaging). Dán "Key pair" (Web Push certificates). Để trống = tắt.
+  push: { vapidKey: "" },
+
   // Chỉ cho các email này đăng nhập. Để trống [] = ai có tài khoản Google cũng vào được
   // (dữ liệu vẫn riêng từng người). VD: ["ban@gmail.com", "banbe@gmail.com"]
   allowedEmails: [],
