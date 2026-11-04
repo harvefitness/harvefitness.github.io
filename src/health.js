@@ -168,7 +168,7 @@ export function saveSteps(date, steps, km, source = "manual", raw = "", at = Dat
   saveLater("health", date, () => A.health[date], 0);
 }
 
-export const stepGoal = () => (["cut", "recomp"].includes(A.profile?.goal) ? 10000 : 8000);
+export const stepGoal = () => (A.profile?.goal === "cut" && A.profile?.cutPlan?.steps) || (["cut", "recomp"].includes(A.profile?.goal) ? 10000 : 8000);
 /** Rough kcal burned by walking: ~0.5 kcal per kg per 1.000 steps. */
 export const stepKcal = (steps) => Math.round((steps / 1000) * 0.5 * (+A.profile?.weight || 60));
 

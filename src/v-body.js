@@ -4,7 +4,8 @@ import * as S from "./store.js";
 import { assess, GOALS } from "./calc.js";
 import * as AI from "./ai.js";
 import { physiqueCard } from "./v-learn.js";
-import { esc, num, fmt, today, shortDate, parseDate, $, toast, md } from "./ui.js";
+import { esc, num, fmt, today, shortDate, parseDate, $, toast, md, daysBetween, addDays } from "./ui.js";
+import { cutOptions, cutPlan, LEVEL_VN, KCAL_PER_KG, DAYS } from "./cutplan.js";
 
 const ST_VN = { good: "Tốt", ok: "Ổn", warn: "Lưu ý", bad: "Cần cải thiện" };
 
@@ -128,11 +129,68 @@ function renderProgress(root) {
   root.innerHTML = h;
 }
 
+let cutPick = null;
+const kgTxt = (x) => fmt(x, x % 1 ? 1 : 0);
+function renderCut(root) {
+  const a = A.as, t = A.t, p = A.profile;
+  const opts = cutOptions(a);
+  const active = p.goal === "cut" && p.cutPlan?.kg ? p.cutPlan : null;
+  const kg = cutPick ?? active?.kg ?? opts.rec;
+  const c = cutPlan(p, a, t, kg);
+  const day = active ? Math.min(DAYS, daysBetween(active.start, today()) + 1) : 0;
+  const lastW = Object.keys(A.body).sort().reverse().map((d) => A.body[d].weight).find((x) => x != null) ?? p.weight;
+  const planW = active ? active.startW - (active.kg * Math.min(day, DAYS)) / DAYS : null;
+  root.innerHTML = `<section class="hero-card cut-hero">
+      <span class="eyebrow">Lộ trình 30 ngày</span>
+      <h2>Giảm <em>${kgTxt(kg)} kg.</em></h2>
+      <p class="muted">Bạn đang ${fmt(a.w, 1)} kg, mỗi ngày tiêu hao khoảng <b>${fmt(c.tdee)} kcal</b> (TDEE). Muốn giảm cân phải ăn ít hơn mức này, tức là <b>thâm hụt calo</b>. Cứ thâm hụt khoảng <b>${fmt(KCAL_PER_KG)} kcal</b> thì giảm 1 kg mỡ.</p>
+    </section>
+    ${active ? `<section class="card cut-active"><span class="eyebrow">Đang theo lộ trình · ngày ${day}/${DAYS}</span>
+      <div class="cut-big3"><div><small>Bắt đầu</small><b class="num">${fmt(active.startW, 1)}</b><span>kg</span></div><div><small>Theo kế hoạch</small><b class="num">${fmt(planW, 1)}</b><span>kg</span></div><div><small>Hiện tại</small><b class="num">${fmt(lastW, 1)}</b><span>kg</span></div></div>
+      <p class="muted sm">${lastW <= planW + 0.3 ? "Đúng tiến độ 👍 Giữ nguyên." : "Đang chậm hơn kế hoạch. Kiểm tra lại nhật ký ăn, hoặc thêm 2.000 bước mỗi ngày."} Cân buổi sáng và ghi ở tab Số đo để theo dõi.</p>
+      ${day >= DAYS ? `<div class="note">Đã đủ 30 ngày! Đo lại eo, cân, chụp ảnh. Nên ăn ở mức duy trì 1 tuần (≈ ${fmt(c.tdee)} kcal) trước khi bắt đầu tháng tiếp theo.</div>` : ""}
+      <button class="ghost sm" data-act="cut-stop">Dừng lộ trình</button></section>` : ""}
+
+    <section class="card"><span class="eyebrow">Muốn giảm bao nhiêu trong 1 tháng?</span>
+      <div class="chips wrap">${opts.list.map((o) => `<button class="chip ${o.kg === kg ? "on" : ""}" data-cutkg="${o.kg}">${kgTxt(o.kg)} kg${o.kg === opts.rec ? " ⭐" : ""}</button>`).join("")}</div>
+      <div class="table-wrap"><table class="cut-table"><thead><tr><th>Giảm</th><th>Thâm hụt / ngày</th><th>/ tháng</th><th>Mức</th></tr></thead><tbody>
+      ${opts.list.map((o) => `<tr class="${o.kg === kg ? "on" : ""} lv-${o.level}"><td><b>${kgTxt(o.kg)} kg</b></td><td class="num">${fmt(o.daily)} kcal</td><td class="num">${fmt(o.month)}</td><td>${LEVEL_VN[o.level]}</td></tr>`).join("")}
+      </tbody></table></div>
+      <p class="muted sm">⭐ Khuyên dùng cho bạn: giảm 0,5–1 % cân nặng mỗi tuần (ACSM) để giữ cơ và không bị ăn bù. Tối đa an toàn với bạn ≈ ${fmt(opts.max, 1)} kg / tháng.</p>
+    </section>
+
+    <section class="card"><span class="eyebrow">Để giảm ${kgTxt(kg)} kg, mỗi ngày bạn cần</span>
+      <div class="cut-big3">
+        <div><small>Thâm hụt</small><b class="num">${fmt(c.daily)}</b><span>kcal / ngày</span></div>
+        <div><small>Ăn tối đa</small><b class="num">${fmt(c.intake)}</b><span>kcal / ngày</span></div>
+        <div><small>Đi bộ</small><b class="num">${fmt(c.stepsTarget)}</b><span>bước / ngày</span></div>
+      </div>
+      <ul class="cut-list">
+        <li><b>Ăn bớt ${fmt(c.food)} kcal</b> so với mức tiêu hao (${fmt(c.tdee)} → ${fmt(c.intake)} kcal). Không ăn dưới ${fmt(c.floor)} kcal.</li>
+        <li><b>Vận động thêm ~${fmt(c.move)} kcal</b>: đi thêm ${fmt(c.extraSteps)} bước mỗi ngày (≈ ${fmt(c.stepKcal)} kcal)${c.cardioWeek > 0 ? ` và cardio ${fmt(c.cardioMin)} phút / tuần (đạp xe, đi nhanh, bơi… ≈ ${fmt(c.cardioWeek)} kcal)` : ""}.</li>
+        <li><b>Đạm ${c.protein} g / ngày</b> để giữ cơ khi ăn ít. Vẫn tập tạ đủ buổi theo lộ trình.</li>
+        <li>Tổng: thâm hụt ${fmt(c.week)} kcal / tuần, ${fmt(c.month)} kcal / tháng → cuối tháng khoảng <b>${fmt(c.endW, 1)} kg</b>.</li>
+      </ul>
+      ${c.warn.map((x) => `<div class="note warn">${esc(x)}</div>`).join("")}
+    </section>
+
+    <section class="card"><span class="eyebrow">Lịch 4 tuần</span>
+      <ol class="cut-weeks">
+        <li><b>Tuần 1 · Làm quen</b> <span class="num muted">~${fmt(c.weeks[0].w, 1)} kg</span><p>Ăn ${fmt(c.intake)} kcal, ghi đủ mọi bữa trong Nhật ký ăn. Đi ${fmt(c.stepsTarget)} bước. Cân sáng 3 lần/tuần. Tuần đầu cân thường giảm nhanh hơn do mất nước, là bình thường.</p></li>
+        <li><b>Tuần 2 · Ổn định</b> <span class="num muted">~${fmt(c.weeks[1].w, 1)} kg</span><p>Giữ nguyên mức ăn. ${c.cardioWeek > 0 ? `Thêm cardio ${fmt(Math.ceil(c.cardioMin / 3))} phút × 3 buổi.` : "Thêm 1 buổi đi bộ nhanh 30 phút cuối tuần."} Ngủ 7–9 tiếng để bớt thèm ăn.</p></li>
+        <li><b>Tuần 3 · Điều chỉnh</b> <span class="num muted">~${fmt(c.weeks[2].w, 1)} kg</span><p>So cân trung bình tuần 3 với tuần 2: giảm dưới ${fmt(c.weekKg * 0.5, 1)} kg → bớt 100 kcal hoặc thêm 2.000 bước. Giảm hơn ${fmt(a.w * 0.01, 1)} kg → ăn thêm 100 kcal.</p></li>
+        <li><b>Tuần 4 · Đánh giá</b> <span class="num muted">~${fmt(c.endW, 1)} kg</span><p>Đo eo, cân, chụp ảnh so với ngày đầu. Sau đó ăn ở mức duy trì (${fmt(c.tdee)} kcal) 5–7 ngày rồi mới bắt đầu tháng mới.</p></li>
+      </ol>
+      ${active && active.kg === kg ? "" : `<button class="primary block" data-act="cut-apply">Áp dụng lộ trình ${kgTxt(kg)} kg</button><p class="muted sm">Áp dụng sẽ đổi mục tiêu của bạn sang <b>Giảm mỡ</b>, mục tiêu calo trong Ăn uống thành ${fmt(c.intake)} kcal và mục tiêu bước chân thành ${fmt(c.stepsTarget)}.</p>`}
+    </section>
+    <p class="muted sm">Cách tính: 1 kg mỡ ≈ 7.700 kcal; TDEE theo Mifflin–St Jeor × mức vận động; tốc độ an toàn 0,5–1 %/tuần (ACSM, ISSN); đi bộ ≈ 0,5 kcal/kg/1.000 bước. Có bệnh nền, đang mang thai hoặc cho con bú: hỏi bác sĩ trước khi ăn thâm hụt.</p>`;
+}
+
 export function renderBody(root, sub) {
-  sub = ["assess", "progress"].includes(sub) ? sub : "assess";
-  root.innerHTML = `<nav class="subtabs">${[["assess", "Đánh giá"], ["progress", "Số đo & tiến bộ"]].map(([k, v]) => `<a href="#body-${k}" ${k === sub ? 'aria-current="page"' : ""}>${v}</a>`).join("")}</nav><div id="body-body"></div>`;
+  sub = ["assess", "cut", "progress"].includes(sub) ? sub : "assess";
+  root.innerHTML = `<nav class="subtabs">${[["assess", "Đánh giá"], ["cut", "Giảm cân"], ["progress", "Số đo"]].map(([k, v]) => `<a href="#body-${k}" ${k === sub ? 'aria-current="page"' : ""}>${v}</a>`).join("")}</nav><div id="body-body"></div>`;
   const body = $("#body-body", root);
-  sub === "assess" ? renderAssess(body) : renderProgress(body);
+  sub === "assess" ? renderAssess(body) : sub === "cut" ? renderCut(body) : renderProgress(body);
   root.onchange = (e) => {
     if (e.target.id === "m-date") {
       editDate = e.target.value || today();
@@ -163,6 +221,29 @@ export function renderBody(root, sub) {
     renderProgress(body);
   };
   root.onclick = async (e) => {
+    const ck = e.target.closest("[data-cutkg]");
+    if (ck) {
+      cutPick = +ck.dataset.cutkg;
+      return renderCut(body);
+    }
+    if (e.target.closest("[data-act=cut-apply]")) {
+      const kg = cutPick ?? cutOptions(A.as).rec;
+      const c = cutPlan(A.profile, A.as, A.t, kg);
+      A.profile.goal = "cut";
+      A.profile.cutPlan = { kg, start: today(), startW: A.as.w, food: c.food, steps: c.stepsTarget, intake: c.intake };
+      await S.saveProfile(A.profile);
+      recompute();
+      cutPick = null;
+      toast(`Đã áp dụng: ăn ${fmt(c.intake)} kcal, đi ${fmt(c.stepsTarget)} bước mỗi ngày trong 30 ngày.`, "good");
+      return renderCut(body);
+    }
+    if (e.target.closest("[data-act=cut-stop]")) {
+      delete A.profile.cutPlan;
+      await S.saveProfile(A.profile);
+      recompute();
+      toast("Đã dừng lộ trình giảm cân. Mục tiêu vẫn là Giảm mỡ, có thể đổi trong hồ sơ.");
+      return renderCut(body);
+    }
     const del = e.target.closest("[data-del]");
     if (del) {
       if (!del.dataset.armed) {

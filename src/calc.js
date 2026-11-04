@@ -293,6 +293,7 @@ export function targets(p, a) {
   if (goal === "cut") {
     deficit = clamp(tdee * 0.2, 300, 750);
     deficit = Math.min(deficit, (0.01 * w * 7700) / 7);
+    if (+p.cutPlan?.food > 0) deficit = +p.cutPlan.food; // the 1-month plan the person chose (food part of the deficit)
   } else if (goal === "recomp") deficit = bf > (male ? 20 : 28) ? tdee * 0.15 : tdee * 0.08;
   else if (goal === "gain") deficit = -clamp(tdee * 0.1, 200, 350);
   else if (goal === "bulk") deficit = -clamp(tdee * 0.15, 300, 500);
