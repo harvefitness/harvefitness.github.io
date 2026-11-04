@@ -148,10 +148,11 @@ if (process.argv.includes("--selftest")) {
 }
 
 // ---------------------------------------------------------------- real run
+const TEST = process.argv.includes("--test"); // one test message to phones that turned reminders on in the last 48 h
 const sa = process.env.FIREBASE_SERVICE_ACCOUNT;
 if (!sa) {
   console.log("Chưa có secret FIREBASE_SERVICE_ACCOUNT – bỏ qua (chưa bật nhắc nhở).");
-  process.exit(0);
+  process.exit(TEST ? 1 : 0);
 }
 const { initializeApp, cert } = await import("firebase-admin/app");
 const { getFirestore } = await import("firebase-admin/firestore");
@@ -169,6 +170,18 @@ for (const u of users.docs) {
   if (!push?.tokens?.length) continue;
   push.sent = (await sentRef.get()).data()?.sent || {};
   checked++;
+  if (TEST) {
+    if (Date.now() - (push.updatedAt || 0) > 48 * 3600e3) continue;
+    const name = u.data().profile?.name || "bạn";
+    const res = await messaging.sendEachForMulticast({
+      tokens: push.tokens,
+      data: { title: "DNT & HARVE FITNESS 💪", body: `Chào ${name}! Nhắc nhở đã chạy. Từ giờ PT sẽ nhắc bạn giờ tập, uống nước và ghi bữa ăn.`, url: "./#home", tag: "test" },
+      webpush: { headers: { Urgency: "high", TTL: "3600" } },
+    });
+    sentCount += res.successCount;
+    console.log(u.id.slice(0, 6), "test", `ok ${res.successCount}/${res.responses.length}`, res.responses.map((x) => x.error?.code || "").join(" "));
+    continue;
+  }
   const profile = u.data().profile;
   const { date } = localNow(push.tz);
   const from = new Date(Date.parse(date) - 35 * 864e5).toISOString().slice(0, 10);
@@ -198,3 +211,4 @@ for (const u of users.docs) {
   if (tokens.length !== push.tokens.length) await pushRef.set({ tokens }, { merge: true });
 }
 console.log(`Đã kiểm tra ${checked} người bật nhắc nhở, gửi ${sentCount} thông báo.`);
+if (TEST && !sentCount) process.exit(1); // make a failed test visible as a red run
