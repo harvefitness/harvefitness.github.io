@@ -4,7 +4,7 @@ import { A, recompute, loadRecent, aiContext, isTrainingDay, waterGoalCups, save
 import { startSetup, renderSetup } from "./v-setup.js";
 import { renderTrain, dayStatus, setTrainDate } from "./v-train.js";
 import { renderFood, snapBar, quickSnap } from "./v-food.js";
-import { stepsCard, stashIncoming, applyPending, openManual, openGuide, pullInbox, markTap } from "./health.js";
+import { stepsCard, stashIncoming, applyPending, openManual, openGuide, pullInbox, markTap, ensureInboxKey } from "./health.js";
 import { pushCard, openPushSettings, pushConfigured, refreshPush } from "./push.js";
 import { renderBody } from "./v-body.js";
 import { SPORTS, GOALS } from "./calc.js";
@@ -335,7 +335,7 @@ S.initStore(async (user, reason) => {
     A.profile = await S.getProfile();
     if (A.profile) {
       recompute();
-      await loadRecent();
+      await Promise.all([loadRecent(), ensureInboxKey().catch(() => null)]);
       applyPending();
       refreshPush();
       pullInbox().then((changed) => changed && document.body.dataset.page === "home" && route());

@@ -21,6 +21,8 @@ window.APP_CONFIG = {
   appCheck: { provider: "v3", siteKey: "" },
 
   // Nhắc nhở qua thông báo (Firebase Cloud Messaging). Dán "Key pair" (Web Push certificates). Để trống = tắt.
+  // Link iCloud của phím tắt "DNT Health" (để mọi người thêm bằng 1 chạm). Để trống nếu chưa có.
+  shortcutLink: "",
   push: { vapidKey: "BJEewPrCTehsmIYOjsD5MS-_Ucd8rIRstB-F37u1K7CmlJM_jPv8fZ89KjEM6QqfsDVnSeIVy5RTaqZvISzByKY" },
 
   // Chỉ cho các email này đăng nhập. Để trống [] = ai có tài khoản Google cũng vào được
