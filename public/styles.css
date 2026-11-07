@@ -655,3 +655,7 @@ details.way-adv > * + * { margin-top: 10px; }
 .diag p { margin: 0; font-size: 13.5px; color: var(--chrome); }
 .diag code { overflow-wrap: anywhere; }
 .badge { display: inline-grid; place-items: center; width: 20px; height: 20px; padding: 0; line-height: 1; border-radius: 50%; background: var(--accent); color: var(--accent-ink); font-size: 11px; font-weight: 800; margin-right: 2px; }
+.msg.log { justify-self: start; background: var(--accent-soft); border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--line)); border-bottom-left-radius: 6px; font-size: 13.5px; }
+.msg.log ul { gap: 4px; }
+.msg.log.undone { opacity: .55; }
+.msg.log .row { margin-top: 2px; }

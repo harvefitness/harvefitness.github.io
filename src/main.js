@@ -3,7 +3,7 @@ import * as S from "./store.js";
 import { A, recompute, loadRecent, aiContext, isTrainingDay, waterGoalCups, saveLater } from "./state.js";
 import { startSetup, renderSetup } from "./v-setup.js";
 import { renderTrain, dayStatus, setTrainDate } from "./v-train.js";
-import { renderFood, snapBar, quickSnap } from "./v-food.js";
+import { renderFood, snapBar, quickSnap, logFoodFromChat, undoChatLog, chatLogCard } from "./v-food.js";
 import { stepsCard, stashIncoming, applyPending, openManual, openGuide, syncHealth, diagnoseReturn, markTap, ensureInboxKey } from "./health.js";
 import { pushCard, openPushSettings, pushConfigured, refreshPush } from "./push.js";
 import { renderBody } from "./v-body.js";
@@ -200,7 +200,7 @@ async function renderChat(root) {
   root.innerHTML = `<div class="chat">
     <div class="chat-log" id="chat-log" aria-live="polite">
       <div class="msg model"><p>Chào ${esc(A.profile.name || "bạn")}! Mình là PT AI của DNT & HARVE FITNESS. Mình đã đọc hồ sơ, chỉ số cơ thể, lộ trình và nhật ký ăn của bạn. Cứ hỏi mình về tập luyện, ăn uống, thực phẩm bổ sung nhé.</p></div>
-      ${chatMsgs.map((m) => `<div class="msg ${m.role}">${m.role === "model" ? md(m.text) : `<p>${esc(m.text)}</p>`}</div>`).join("")}
+      ${chatMsgs.map((m, i) => `<div class="msg ${m.role}">${m.role === "model" ? md(m.text) : `<p>${esc(m.text)}</p>`}</div>${m.role === "model" && chatMsgs[i - 1]?.logged ? chatLogCard(chatMsgs[i - 1].logged, i - 1, chatMsgs[i - 1].logged.undone) : ""}`).join("")}
     </div>
     ${!chatMsgs.length ? `<div class="chips wrap sugg">${["Lên giúp mình thực đơn ngày mai", "Bài nào giúp mông to và tròn hơn?", "Mình nên tập gì vào ngày chơi tennis?", "Tối nay ăn ngoài thì chọn món gì?"].map((q) => `<button class="chip" data-q="${esc(q)}">${esc(q)}</button>`).join("")}</div>` : ""}
     <form class="chat-in" id="chat-form">
@@ -231,14 +231,22 @@ async function renderChat(root) {
     log.insertAdjacentHTML("beforeend", `<div class="msg user"><p>${esc(text)}</p></div><div class="msg model typing"><p>Đang soạn câu trả lời…</p></div>`);
     const out = log.lastElementChild;
     scroll();
+    // In parallel: if the message tells what was eaten, write it into Ăn uống.
+    const logging = logFoodFromChat(text).catch((e) => (console.warn("chat food log:", e), null));
     try {
-      const answer = await AI.chat(history, text, AI.PT_SYSTEM + "\n\n" + aiContext(), (full) => {
+      const answer = await AI.chat(history.map(({ role, text }) => ({ role, text })), text, AI.PT_SYSTEM + "\n\n" + aiContext() + "\n\nLưu ý: web tự ghi các món người dùng kể ĐÃ ăn vào nhật ký Ăn uống. Nếu họ kể món đã ăn, nhận xét bữa đó (calo, đạm, nên bù gì) và KHÔNG bảo họ nhập lại.", (full) => {
         out.classList.remove("typing");
         out.innerHTML = md(full);
         scroll();
       });
-      chatMsgs.push({ role: "user", text }, { role: "model", text: answer });
+      const logged = await logging;
+      const um = { role: "user", text, ...(logged ? { logged } : {}) };
+      chatMsgs.push(um, { role: "model", text: answer });
       chatMsgs = chatMsgs.slice(-40);
+      if (logged) {
+        out.insertAdjacentHTML("afterend", chatLogCard(logged, chatMsgs.length - 2));
+        scroll();
+      }
       S.set("chat", "main", { messages: chatMsgs }).catch(() => {});
     } catch (e) {
       console.error(e);
@@ -256,6 +264,16 @@ async function renderChat(root) {
     send(t);
   };
   root.onclick = async (e) => {
+    const u = e.target.closest("[data-undo]");
+    if (u) {
+      const m = chatMsgs.find((x) => x.logged?.lid === u.dataset.undo);
+      if (!m?.logged || m.logged.undone) return;
+      const n = undoChatLog(m.logged);
+      m.logged.undone = true;
+      S.set("chat", "main", { messages: chatMsgs }).catch(() => {});
+      u.closest(".msg.log").outerHTML = chatLogCard(m.logged, 0, true);
+      return toast(`Đã xóa ${n} món khỏi nhật ký.`);
+    }
     const q = e.target.closest("[data-q]");
     if (q) send(q.dataset.q);
     if (e.target.id === "chat-clear") {

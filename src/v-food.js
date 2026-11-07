@@ -447,3 +447,74 @@ Viết: 1) Đánh giá chung (1–2 câu), 2) Điểm tốt, 3) Cần sửa (c�
     }
   });
 }
+
+// ---------------------------------------------------------------- Food told to the PT chat → food log
+// "Trưa nay ăn 1 đĩa cơm gà, 1 ly trà sữa" in the chat is written straight into Ăn uống (with undo),
+// so nothing has to be typed or photographed twice. Questions and planned meals are not logged.
+const FOOD_HINT = /(ăn|uống|nhậu|xơi|bữa|sáng|trưa|chiều|tối|khuya|cơm|phở|bún|miến|mì|hủ tiếu|cháo|bánh|xôi|trứng|thịt|gà|bò|heo|cá|tôm|rau|trái|chuối|táo|sữa|whey|trà|cà phê|cafe|nước ép|sinh tố|bia|rượu|kcal|calo)/i;
+export const looksLikeFood = (t) => FOOD_HINT.test(String(t || ""));
+
+const SLOT_KEYS = Object.keys(MEAL_SLOTS);
+/** Ask Gemini whether the message reports food actually eaten; log it. Returns a summary or null. */
+export async function logFoodFromChat(text) {
+  if (!AI.AI_READY || !looksLikeFood(text)) return null;
+  const now = new Date();
+  const time = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+  const res = await AI.askJSON(
+    `Tin nhắn người dùng gửi cho PT: """${String(text).slice(0, 1500)}"""
+Bây giờ là ${time} ngày ${today()}.
+Nhiệm vụ: nếu tin nhắn KỂ những món người dùng ĐÃ ăn/uống (hoặc đang ăn) thì liệt kê từng món để ghi vào nhật ký ăn uống.
+KHÔNG ghi: câu hỏi ("ăn X có tốt không?"), món dự định/sắp ăn, thực đơn nhờ gợi ý, món của người khác. Khi đó trả "entries": [].
+Trả về JSON đúng dạng:
+{"entries":[{"day":"today" hoặc "yesterday","slot":"sang|trua|chieu|toi|phu","n":"tên món tiếng Việt","portion":"khẩu phần, vd 1 tô ~500g","kcal":số,"p":gam đạm,"c":gam tinh bột,"f":gam chất béo,"tags":"r nếu chiên/xào nhiều dầu; u nếu đồ ngọt/nước có đường; a nếu rượu bia; v nếu là rau"}]}
+kcal, p, c, f là TỔNG cho cả số lượng đã kể (vd "3 lon bia" ≈ 3 × 130 = 390 kcal; "2 quả trứng" = 2 quả).
+slot: theo lời kể (sáng=sang, trưa=trua, chiều=chieu, tối/khuya=toi, ăn vặt/bữa phụ=phu); không nói rõ thì theo giờ hiện tại. Khẩu phần không nói rõ thì lấy khẩu phần phổ biến ở Việt Nam.`,
+    NUTRI_SYS
+  );
+  const entries = (res?.entries || []).filter((x) => x && x.n && +x.kcal >= 0);
+  if (!entries.length) return null;
+  const lid = Math.random().toString(36).slice(2, 9);
+  const out = [];
+  for (const x of entries.slice(0, 20)) {
+    const date = x.day === "yesterday" ? addDays(today(), -1) : today();
+    const slot = SLOT_KEYS.includes(x.slot) ? x.slot : date === today() ? slotForTime(time) : "phu";
+    const item = { n: String(x.n).slice(0, 80), portion: String(x.portion || "").slice(0, 60), kcal: +x.kcal || 0, p: +x.p || 0, c: +x.c || 0, f: +x.f || 0, tags: String(x.tags || ""), qty: 1, ai: true, lid };
+    if (!A.food[date]) await loadDay("food", date).catch(() => null);
+    const log = getLog(date);
+    (log.meals[slot] ||= []).push(item);
+    delete log.aiReview;
+    out.push({ date, slot, n: item.n, portion: item.portion, kcal: item.kcal, p: item.p });
+  }
+  for (const d of new Set(out.map((o) => o.date))) saveLater("food", d, () => A.food[d], 300);
+  return { lid, items: out };
+}
+
+/** Remove what one chat message logged. */
+export function undoChatLog(logged) {
+  if (!logged?.lid) return 0;
+  let n = 0;
+  for (const d of new Set(logged.items.map((o) => o.date))) {
+    const log = A.food[d];
+    if (!log) continue;
+    for (const k of Object.keys(log.meals || {})) {
+      const before = log.meals[k].length;
+      log.meals[k] = log.meals[k].filter((it) => it.lid !== logged.lid);
+      n += before - log.meals[k].length;
+    }
+    delete log.aiReview;
+    saveLater("food", d, () => A.food[d], 0);
+  }
+  return n;
+}
+
+/** Card shown under the PT's answer. */
+export function chatLogCard(logged, i, undone) {
+  const tot = logged.items.reduce((t, x) => ({ kcal: t.kcal + x.kcal, p: t.p + x.p }), { kcal: 0, p: 0 });
+  const day = (d) => (d === today() ? "hôm nay" : "hôm qua");
+  return `<div class="msg log ${undone ? "undone" : ""}" data-log="${i}">
+    <p><b>${undone ? "Đã hoàn tác" : "✓ Đã ghi vào Ăn uống"}</b></p>
+    <ul>${logged.items.map((x) => `<li>${esc(MEAL_SLOTS[x.slot])} ${day(x.date)} · ${esc(x.n)}${x.portion ? ` <small class="muted">(${esc(x.portion)})</small>` : ""} · <span class="num">${fmt(x.kcal)} kcal</span></li>`).join("")}</ul>
+    <p class="muted sm">Tổng ${fmt(tot.kcal)} kcal · đạm ${fmt(tot.p)}g</p>
+    ${undone ? "" : `<div class="row gap"><a class="ghost sm" href="#food-log">Xem nhật ký</a><button class="link" data-undo="${esc(logged.lid)}">Hoàn tác</button></div>`}
+  </div>`;
+}
