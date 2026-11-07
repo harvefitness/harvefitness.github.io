@@ -166,8 +166,8 @@ function renderHome(root) {
     const wd = e.target.closest("[data-date]");
     if (wd) setTrainDate(wd.dataset.date);
     if (e.target.closest("[data-today]")) setTrainDate(today());
-    const snap = e.target.closest("[data-act=snap-photo], [data-act=snap-voice]");
-    if (snap) return quickSnap(snap.dataset.act === "snap-photo" ? "photo" : "voice", d, () => renderHome(root));
+    const snap = e.target.closest("[data-act=snap-photo], [data-act=snap-voice], [data-act=snap-manual]");
+    if (snap) return quickSnap(snap.dataset.act.slice(5), d, () => renderHome(root));
     if (e.target.closest("[data-act=health-run]")) markTap(); // the link itself opens the shortcut
     if (e.target.closest("[data-act=health-manual]")) return openManual(() => renderHome(root));
     if (e.target.closest("[data-act=push-open]")) return openPushSettings(() => renderHome(root));

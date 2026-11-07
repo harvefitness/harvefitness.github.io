@@ -16,11 +16,13 @@
 :root[data-theme="pink"] { --accent: #ff7ac6; --accent-soft: #3a1a2d; }
 
 * { box-sizing: border-box; }
-html { -webkit-text-size-adjust: 100%; background: var(--bg); }
+html { -webkit-text-size-adjust: 100%; background: var(--bg); min-height: 100%; }
 body {
   margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.55 var(--f-body);
   font-variant-numeric: tabular-nums; -webkit-tap-highlight-color: transparent;
   padding-bottom: calc(var(--nav-h) + env(safe-area-inset-bottom, 0px) + 18px);
+  /* Short pages (e.g. rest day) must still fill the whole screen, otherwise iOS home-screen apps lift the fixed menu up. */
+  min-height: 100vh; min-height: 100lvh;
 }
 body.no-scroll { overflow: hidden; }
 [hidden] { display: none !important; }
@@ -477,8 +479,11 @@ body:has(.login) { padding-bottom: 0; }
 
 /* ---------- Photo / voice food capture ---------- */
 .quick-snap { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.quick-snap.three { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+.quick-snap.three .primary { padding: 10px 4px; font-size: 11px; letter-spacing: .05em; gap: 5px; white-space: nowrap; }
+.quick-snap.one { grid-template-columns: 1fr; }
 .quick-snap .primary svg, .snap-btn svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex: none; }
-.quick-snap .primary:last-child { background: var(--raised); color: var(--ink); }
+.quick-snap .primary.alt { background: var(--raised); color: var(--ink); }
 .snap { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .snap-btn { border: 1px solid var(--line); background: var(--raised); border-radius: 20px; padding: 16px 12px; display: grid; justify-items: center; gap: 4px; text-align: center; color: var(--ink); }
 .snap-btn svg { width: 30px; height: 30px; color: var(--accent); margin-bottom: 4px; }
@@ -659,3 +664,4 @@ details.way-adv > * + * { margin-top: 10px; }
 .msg.log ul { gap: 4px; }
 .msg.log.undone { opacity: .55; }
 .msg.log .row { margin-top: 2px; }
+@media (max-width: 360px) { .quick-snap.three .primary svg { display: none; } }

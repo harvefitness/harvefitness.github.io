@@ -119,7 +119,7 @@ const NUTRI_FMT = `Trả về JSON đúng dạng:
 Mỗi món/đồ uống một dòng. Không nhận ra đồ ăn thì "items": [].`;
 
 function openAdd(slot, onDone, { start } = {}) {
-  let mode = AI.AI_READY ? "ai" : "list", q = "", qty = {};
+  let mode = start === "manual" ? "list" : AI.AI_READY ? "ai" : "list", q = "", qty = {};
   let aiItems = null, aiNote = "", photo = null, text = "", rec = null, busy = false;
   const body = openSheet(`<h2>Thêm vào ${MEAL_SLOTS[slot].toLowerCase()}</h2>
     <div class="seg full">${[["ai", "Chụp · Nói"], ["list", "Có sẵn"], ["manual", "Tự nhập"]].map(([k, v]) => `<button class="seg-b" data-m="${k}">${v}</button>`).join("")}</div>
@@ -311,13 +311,13 @@ function openAdd(slot, onDone, { start } = {}) {
 }
 
 // ---------------------------------------------------------------- Quick photo / voice capture
+const PEN = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13.5 6.5l4 4"/></svg>`;
 export const snapBar = () =>
-  AI.AI_READY
-    ? `<div class="quick-snap">
-    <button class="primary" data-act="snap-photo"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>Chụp món</button>
-    <button class="primary" data-act="snap-voice"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>Nói món</button>
-  </div>`
-    : "";
+  `<div class="quick-snap ${AI.AI_READY ? "three" : "one"}">
+    ${AI.AI_READY ? `<button class="primary" data-act="snap-photo"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>Chụp món</button>
+    <button class="primary alt" data-act="snap-voice"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>Nói món</button>` : ""}
+    <button class="primary alt" data-act="snap-manual">${PEN}Nhập tay</button>
+  </div>`;
 
 /** Open the AI capture sheet (photo or voice) for a date; must be called from a tap. */
 export function quickSnap(kind, date = today(), after) {
@@ -397,9 +397,9 @@ export async function renderFood(root, sub) {
       save(logDate);
       return redraw();
     }
-    if (a === "snap-photo" || a === "snap-voice") {
+    if (a === "snap-photo" || a === "snap-voice" || a === "snap-manual") {
       const d = root.dataset.sub === "log" ? logDate : today();
-      quickSnap(a === "snap-photo" ? "photo" : "voice", d, () => {
+      quickSnap(a.slice(5) === "photo" ? "photo" : a.slice(5) === "voice" ? "voice" : "manual", d, () => {
         logDate = d;
         location.hash = "#food-log";
         redraw();
